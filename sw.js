@@ -1,5 +1,5 @@
 // 公園間歇快走慢跑教練 — service worker：離線快取＋通知點擊
-const CACHE='iw-v5';
+const CACHE='iw-v6';
 const FILES=['./','./index.html','./manifest.json','./icon-192.png','./icon-512.png'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(c=>c.addAll(FILES)).then(()=>self.skipWaiting()))});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k.startsWith('iw-')&&k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});

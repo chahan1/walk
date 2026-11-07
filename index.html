@@ -641,6 +641,7 @@ function renderNotifyStatus(){
 
 /* ---------- 計時器（背景模式以音軌時間為準） ---------- */
 let R=null;
+window.__iw={get R(){return R}}; // 測試用
 function startRun(key,segs){
   try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();AC.resume&&AC.resume()}catch(e){}
   try{speechSynthesis.cancel();speechSynthesis.speak(new SpeechSynthesisUtterance(''))}catch(e){}
@@ -652,6 +653,10 @@ function startRun(key,segs){
       R.audio=a;R.url=url;R.mode='audio';
       a.addEventListener('ended',()=>{if(R&&!R.done)finishRun(true)});
       a.addEventListener('timeupdate',()=>tick()); // 媒體事件在背景不像計時器那樣被降速
+      a.addEventListener('pause',()=>{ // 被別的 App（例如英語記事本播例句）暫停：讓出播放權，改用時鐘繼續計時
+        if(!R||R.done||R.paused||R.selfPause||a.ended||a.currentTime>=R.total-.5||R.mode!=='audio')return;
+        yieldAudio();
+      });
       const p=a.play();
       if(p&&p.catch)p.catch(()=>{if(R){R.mode='clock';R.t0=Date.now();toast('無法播放背景音軌，改用一般模式（請保持螢幕亮著）')}});
       setupMediaSession();
@@ -662,6 +667,17 @@ function startRun(key,segs){
   $('rProfile').innerHTML=profileSVG(segs,true);
   $('runner').classList.add('on');$('runner').classList.remove('paused');$('bPause').textContent='暫停';document.body.style.overflow='hidden';
   keepAwake();R.timer=setInterval(tick,250);tick();
+}
+function yieldAudio(){
+  const t=R.audio.currentTime;R.mode='clock';R.yielded=true;R.t0=Date.now();R.pausedAcc=0;R.offset=t;
+  $('rMode').innerHTML='其他 App 正在播放，已讓出聲音（計時照常）<br><button id="bReclaim" style="margin-top:6px;border:1.5px solid currentColor;background:none;color:inherit;border-radius:14px;padding:4px 12px;font-size:13px">例句播完了，接回背景音軌</button>';
+  const b=$('bReclaim');if(b)b.onclick=reclaimAudio;
+}
+function reclaimAudio(){ // 回到間歇 App 畫面時，才把音軌接回來
+  if(!R||R.done||R.paused||!R.yielded||!R.audio)return;
+  const t=pos();if(t>=R.total)return;
+  try{R.audio.currentTime=t;const q=R.audio.play();
+    if(q&&q.then)q.then(()=>{R.mode='audio';R.yielded=false;$('rMode').textContent=S.quiet?'英語練習模式：手機靜音，換段由手環震動':'背景模式：可以關閉螢幕'}).catch(()=>{})}catch(e){}
 }
 function pos(){
   if(!R)return 0;
@@ -712,7 +728,6 @@ function tick(){
   const i=segIndexAt(p);
   if(i!==R.idx){R.idx=i;enterSeg()}
   if(R.paused)return;
-  if(R.audio&&R.audio.paused&&!R.done&&Date.now()-(R.lastReplay||0)>3000){R.lastReplay=Date.now();try{const q=R.audio.play();q&&q.catch&&q.catch(()=>{})}catch(e){}}
   const g=R.segs[R.idx];const rem=R.starts[R.idx]+g.s-p;
   $('rTime').textContent=mmss(rem);
   const done=p-R.skipped;
@@ -720,6 +735,9 @@ function tick(){
   $('rElapsed').textContent=mmss(p)+' / '+mmss(R.total);
   const c=R.cues;
   const nx=R.segs[R.idx+1];
+  const nowT=Date.now(),gap=nowT-(R.lastTick||nowT);R.lastTick=nowT;
+  if(R.mode==='clock'&&document.visibilityState==='hidden'&&gap>4000&&nx&&rem<=75&&rem>3&&!c.approx&&!c.pre){c.approx=1;
+    notify('⏩ 約 '+Math.round(rem)+' 秒後：'+segName(nx)+' '+durText(nx.s),'App 在背景被降速，先提早提醒你')}
   if(+S.lead>0&&nx&&rem<=+S.lead&&rem>1&&!c.pre){c.pre=1;
     notify('⏩ '+Math.round(rem)+' 秒後：'+segName(nx)+' '+durText(nx.s),'RPE '+T[nx.t].rpe+'｜'+T[nx.t].talk);
     say(Math.round(rem)+'秒後，'+segName(nx),'In '+Math.round(rem)+' seconds, '+nameEn(nx))}
@@ -744,9 +762,9 @@ function togglePause(force){
   if(!R||R.done)return;
   const want=force===undefined?!R.paused:force;
   if(want===R.paused)return;
-  if(want){R.paused=true;R.pauseAt=Date.now();if(R.audio)try{R.audio.pause()}catch(e){}
+  if(want){if(R.mode==='audio'&&R.audio){R.selfPause=true;try{R.audio.pause()}catch(e){}R.selfPause=false}R.paused=true;R.pauseAt=Date.now();
     $('bPause').textContent='繼續';$('runner').classList.add('paused');say('暫停','Paused');releaseAwake()}
-  else{if(R.mode==='clock')R.pausedAcc+=Date.now()-R.pauseAt;R.paused=false;if(R.audio)try{R.audio.play()}catch(e){}
+  else{if(R.mode==='clock')R.pausedAcc+=Date.now()-R.pauseAt;R.paused=false;if(R.mode==='audio'&&R.audio){try{R.audio.play()}catch(e){}}else reclaimAudio();
     $('bPause').textContent='暫停';$('runner').classList.remove('paused');say('繼續','Resume');keepAwake();tick()}
 }
 function skip(){
