@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1E3A33">
+<title>心率連線測試｜間歇快走慢跑教練</title>
+<link rel="icon" href="icon-192.png">
+<style>
+:root{--bg:#F3F6F1;--surface:#FFFFFF;--ink:#1E3A33;--sub:#66806F;--line:#DDE6DD;--soft:#E4EEE4;--green:#5DBB7E;--red:#E8513B;--sun:#F2B33D;
+  --cjk:-apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif}
+@media (prefers-color-scheme: dark){:root{--bg:#142420;--surface:#1E322C;--ink:#EAF2EC;--sub:#9DB3A6;--line:#2E443C;--soft:#253B34}}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--cjk);font-size:14.5px;line-height:1.6;-webkit-font-smoothing:antialiased;padding:env(safe-area-inset-top) 0 40px}
+.wrap{max-width:480px;margin:0 auto;padding:14px 18px}
+h1{font-size:20px;font-weight:700;letter-spacing:.5px;margin:6px 2px 2px}
+.lead{color:var(--sub);font-size:13px;margin:0 2px}
+.block{background:var(--surface);border-radius:16px;padding:14px;margin-top:12px;box-shadow:inset 0 0 0 1px var(--line)}
+.block h2{font-size:14.5px;font-weight:700;margin-bottom:6px;display:flex;gap:8px;align-items:center}
+.block h2 i{font-style:normal;width:22px;height:22px;border-radius:7px;background:var(--soft);display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700}
+.block p,.block li{font-size:13px}
+.block ol{padding-left:18px}
+.sub{color:var(--sub);font-size:12px}
+.btn{appearance:none;border:0;border-radius:12px;padding:10px 14px;font-size:14px;font-weight:600;background:var(--ink);color:var(--bg);width:100%;margin-top:10px;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.btn:disabled{opacity:.4}
+.status{font-size:13px;padding:8px 10px;border-radius:10px;background:var(--soft);margin-top:10px}
+.status.ok{background:rgba(93,187,126,.22)}.status.bad{background:rgba(232,81,59,.18)}
+.hr{display:flex;align-items:baseline;gap:6px;margin-top:10px}
+.hr b{font-size:56px;font-weight:600;line-height:1;font-variant-numeric:tabular-nums;color:var(--red)}
+.hr span{color:var(--sub)}
+.beat{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--red);opacity:.25;transition:opacity .15s}
+.beat.on{opacity:1}
+pre{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;line-height:1.5;background:var(--bg);border-radius:10px;padding:10px;margin-top:10px;max-height:260px;overflow:auto;white-space:pre-wrap;word-break:break-all}
+a{color:inherit}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>心率連線測試</h1>
+  <p class="lead">測試小米手環的「運動心率廣播」能不能把心率傳給間歇 App。依序做 1 → 2，不行再試 3、4。</p>
+
+  <div class="block">
+    <h2><i>0</i>先檢查這支手機</h2>
+    <div class="status" id="envStatus">檢查中…</div>
+  </div>
+
+  <div class="block">
+    <h2><i>1</i>打開手環的心率廣播</h2>
+    <ol>
+      <li>在手環的設定，或「小米運動健康」App 的手環設定裡，找「運動心率廣播」（也可能叫「心率廣播」），打開它。</li>
+      <li>在手環上開始一個運動，例如「戶外跑步」或「健走」。很多手環只有在運動中才會廣播。</li>
+      <li>手機的藍牙和定位都要打開。</li>
+    </ol>
+  </div>
+
+  <div class="block">
+    <h2><i>2</i>用標準心率格式連接</h2>
+    <p class="sub">如果手環用標準心率格式廣播，按下後的清單裡會出現手環，選它並配對。</p>
+    <button class="btn" id="bStd">搜尋心率裝置</button>
+    <div class="hr" id="hrBox" style="display:none"><b id="hrVal">--</b><span>下/分</span><span class="beat" id="beat"></span></div>
+    <div class="status" id="stdStatus" style="display:none"></div>
+    <button class="btn ghost" id="bDisc" style="display:none">中斷連線</button>
+  </div>
+
+  <div class="block">
+    <h2><i>3</i>清單裡沒有手環？列出所有藍牙裝置</h2>
+    <p class="sub">清單會列出附近所有藍牙裝置。找名稱有 Xiaomi、Band 或 Mi 的裝置，選它後，工具會列出手環提供的功能，記錄在下方。</p>
+    <button class="btn ghost" id="bAll">列出所有藍牙裝置</button>
+    <div class="status" id="allStatus" style="display:none"></div>
+  </div>
+
+  <div class="block">
+    <h2><i>4</i>進階：直接讀取廣播封包</h2>
+    <p class="sub">有些小米手環不提供連線，只把心率放在廣播封包裡。Chrome 要先開啟實驗功能：網址列輸入 <b>chrome://flags</b>，搜尋「Experimental Web Platform features」，改成 Enabled，重新開啟 Chrome 再回來。</p>
+    <button class="btn ghost" id="bScan">開始掃描廣播（30 秒）</button>
+    <div class="status" id="scanStatus" style="display:none"></div>
+    <div class="hr" id="advBox" style="display:none"><b id="advVal">--</b><span>下/分（推測）</span></div>
+  </div>
+
+  <div class="block">
+    <h2><i>✓</i>測試紀錄</h2>
+    <p class="sub">測完按「複製紀錄」，把內容貼給 Claude，我會依結果決定怎麼接進間歇 App。</p>
+    <pre id="log"></pre>
+    <button class="btn" id="bCopy">複製紀錄</button>
+    <p class="sub" style="margin-top:10px"><a href="./">← 回到間歇快走慢跑教練</a></p>
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+const $=id=>document.getElementById(id);
+const lines=[];
+function log(t){const d=new Date();const s=d.toTimeString().slice(0,8)+'  '+t;lines.push(s);$('log').textContent=lines.slice(-200).join('\n');$('log').scrollTop=1e9}
+function setStatus(id,txt,cls){const e=$(id);e.style.display='block';e.className='status'+(cls?' '+cls:'');e.textContent=txt}
+const hex=dv=>{let s=[];for(let i=0;i<dv.byteLength;i++)s.push(dv.getUint8(i).toString(16).padStart(2,'0'));return s.join(' ')};
+const SVC={'0000180d':'標準心率 (Heart Rate)','0000180f':'電池','0000180a':'裝置資訊','0000fee0':'小米/華米 專用 FEE0','0000fee1':'小米/華米 專用 FEE1','0000fe95':'小米 專用 FE95','00001800':'通用存取','00001801':'通用屬性'};
+const svcName=u=>SVC[u.slice(0,8)]||u;
+
+/* 0. 環境 */
+const ua=navigator.userAgent;
+log('瀏覽器：'+ua);
+log('網址：'+location.href);
+if(!('bluetooth' in navigator)){
+  setStatus('envStatus','❌ 這個瀏覽器不支援網頁藍牙。請用 Android 手機的 Chrome 開啟這個網址（不能在 Claude App 的預覽或 LINE 內建瀏覽器裡開）。','bad');
+  log('navigator.bluetooth 不存在');
+  ['bStd','bAll','bScan'].forEach(i=>$(i).disabled=true);
+}else{
+  navigator.bluetooth.getAvailability().then(a=>{
+    setStatus('envStatus',a?'✅ 這支手機可以使用網頁藍牙。':'⚠️ 偵測不到藍牙，請打開手機的藍牙再重新整理。',a?'ok':'bad');log('藍牙可用：'+a);
+  }).catch(()=>{setStatus('envStatus','✅ 支援網頁藍牙（無法確認藍牙是否開啟）。','ok')});
+  log('支援廣播掃描 requestLEScan：'+(typeof navigator.bluetooth.requestLEScan==='function'));
+}
+
+/* 2. 標準心率 */
+let dev=null,lastBeat=0;
+function parseHR(dv){const f=dv.getUint8(0);return (f&1)?dv.getUint16(1,true):dv.getUint8(1)}
+async function subscribeHR(server){
+  const svc=await server.getPrimaryService('heart_rate');
+  const ch=await svc.getCharacteristic('heart_rate_measurement');
+  ch.addEventListener('characteristicvaluechanged',e=>{
+    const v=parseHR(e.target.value);$('hrVal').textContent=v;$('hrBox').style.display='flex';
+    const b=$('beat');b.classList.add('on');setTimeout(()=>b.classList.remove('on'),150);
+    if(Date.now()-lastBeat>5000){log('心率 '+v+' 下/分（原始資料 '+hex(e.target.value)+'）');lastBeat=Date.now()}
+  });
+  await ch.startNotifications();
+  setStatus('stdStatus','✅ 成功！心率已經傳進來了。手環這樣設定，間歇 App 就能讀到心率。','ok');
+  log('✅ 標準心率訂閱成功');$('bDisc').style.display='block';
+}
+$('bStd').onclick=async()=>{
+  try{
+    log('— 測試 2：搜尋標準心率裝置');
+    dev=await navigator.bluetooth.requestDevice({filters:[{services:['heart_rate']}]});
+    log('選擇裝置：'+(dev.name||'(沒有名稱)')+'  id='+dev.id);
+    dev.addEventListener('gattserverdisconnected',()=>{log('連線中斷');setStatus('stdStatus','連線中斷了。手環結束運動或離太遠時會中斷。','bad')});
+    setStatus('stdStatus','連線中…');
+    const server=await dev.gatt.connect();log('已連線');
+    await subscribeHR(server);
+  }catch(e){
+    log('❌ 測試 2 失敗：'+e.name+'：'+e.message);
+    setStatus('stdStatus',e.name==='NotFoundError'?'清單裡沒有選到裝置（或沒有出現手環）。請確認手環已在運動中並開啟心率廣播，或試試步驟 3、4。':'沒有成功：'+e.message,'bad');
+  }
+};
+$('bDisc').onclick=()=>{try{dev&&dev.gatt.disconnect()}catch(e){}$('bDisc').style.display='none'};
+
+/* 3. 列出所有裝置與服務 */
+$('bAll').onclick=async()=>{
+  try{
+    log('— 測試 3：列出所有裝置');
+    const d=await navigator.bluetooth.requestDevice({acceptAllDevices:true,optionalServices:['heart_rate','battery_service','device_information',0xfee0,0xfee1,0xfe95,0x1800,0x1801]});
+    log('選擇裝置：'+(d.name||'(沒有名稱)')+'  id='+d.id);
+    setStatus('allStatus','連線中…');
+    const server=await d.gatt.connect();log('已連線');
+    const svcs=await server.getPrimaryServices();
+    let hasHR=false;
+    for(const s of svcs){
+      log('服務：'+svcName(s.uuid));
+      if(s.uuid.startsWith('0000180d'))hasHR=true;
+      try{const chs=await s.getCharacteristics();chs.forEach(c=>{const p=c.properties;log('   特徵 '+c.uuid.slice(0,8)+'  '+[p.read?'讀':'',p.notify?'通知':'',p.write?'寫':''].filter(Boolean).join('/'))})}catch(e){log('   （無法讀取特徵：'+e.message+'）')}
+    }
+    if(hasHR){setStatus('allStatus','✅ 這個裝置有標準心率服務，正在讀取心率…','ok');dev=d;await subscribeHR(server)}
+    else setStatus('allStatus','連上了，但沒有找到標準心率服務。紀錄裡有它提供的功能，請複製給 Claude 看。',null);
+  }catch(e){
+    log('❌ 測試 3 失敗：'+e.name+'：'+e.message);
+    setStatus('allStatus',e.name==='NotFoundError'?'沒有選擇裝置。':'沒有成功：'+e.message+'（手環可能正被「小米運動健康」占用，只允許一個連線）','bad');
+  }
+};
+
+/* 4. 廣播封包掃描 */
+$('bScan').onclick=async()=>{
+  if(typeof navigator.bluetooth.requestLEScan!=='function'){setStatus('scanStatus','這支手機的 Chrome 還沒開啟實驗功能，請照上面的說明到 chrome://flags 開啟後再試。','bad');log('requestLEScan 不可用');return}
+  try{
+    log('— 測試 4：掃描廣播封包 30 秒');
+    const scan=await navigator.bluetooth.requestLEScan({acceptAllAdvertisements:true,keepRepeatedDevices:true});
+    setStatus('scanStatus','掃描中…請保持手環在運動中，靠近手機。');
+    const seen={};let n=0;
+    const onAdv=e=>{
+      const name=e.device.name||e.name||'';
+      const md=e.manufacturerData;if(!md||!md.size)return;
+      md.forEach((dv,cid)=>{
+        const isMi=cid===0x0157||cid===0x038f||/band|xiaomi|mi /i.test(name);
+        if(!isMi)return;
+        const h=hex(dv);const key=e.device.id+cid;
+        if(seen[key]!==h){seen[key]=h;n++;
+          log('廣播 '+(name||'(無名稱)')+'  廠商 0x'+cid.toString(16).padStart(4,'0')+'  RSSI '+e.rssi+'  資料 '+h);
+          if(cid===0x0157&&dv.byteLength>3){const v=dv.getUint8(3);if(v>30&&v<230){$('advVal').textContent=v;$('advBox').style.display='flex'}}
+        }
+      });
+    };
+    navigator.bluetooth.addEventListener('advertisementreceived',onAdv);
+    setTimeout(()=>{scan.stop();navigator.bluetooth.removeEventListener('advertisementreceived',onAdv);
+      setStatus('scanStatus',n?'掃描結束，收到 '+n+' 筆小米廣播。請對照手環螢幕上的心率，看上面的推測值是否一致，並把紀錄複製給 Claude。':'掃描結束，沒有收到小米手環的廣播。',n?'ok':'bad');log('掃描結束，共 '+n+' 筆')},30000);
+  }catch(e){log('❌ 測試 4 失敗：'+e.name+'：'+e.message);setStatus('scanStatus','沒有成功：'+e.message,'bad')}
+};
+
+/* 複製紀錄 */
+$('bCopy').onclick=async()=>{const t=lines.join('\n');try{await navigator.clipboard.writeText(t);$('bCopy').textContent='已複製'}catch(e){const r=document.createRange();r.selectNodeContents($('log'));const s=getSelection();s.removeAllRanges();s.addRange(r);$('bCopy').textContent='已選取，請長按複製'}setTimeout(()=>$('bCopy').textContent='複製紀錄',2500)};
+})();
+</script>
+</body>
+</html>
