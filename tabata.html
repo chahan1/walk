@@ -141,7 +141,7 @@ details.edit[open] summary::after{content:"收合"}
     <button data-p="classic"><b>經典 Tabata</b><span>20 秒／10 秒 × 8，約 4 分鐘</span></button>
     <button data-p="adidas"><b>adidas 15 分鐘</b><span>兩個動作交替，3 組，組間 1 分鐘</span></button>
     <button data-p="easy"><b>入門版</b><span>20 秒／20 秒 × 8，強度較低</span></button>
-    <button data-p="custom"><b>自訂</b><span>每一段長度自己決定</span></button>
+    <button data-p="custom"><b>自訂</b><span id="customSum">每一段長度自己決定</span></button>
   </div>
 
   <div class="plan">
@@ -219,7 +219,10 @@ const PRESETS={
 };
 const DEF={preset:'classic',...PRESETS.classic,adv:'auto',voice:true,lang:'zh',beep:true,vib:true,custom:null};
 let S=Object.assign({},DEF,store.get('tabata_settings',{}));
-const save=()=>store.set('tabata_settings',S);
+const KEYS=['prep','work','rest','rounds','sets','setRest','cool','ex'];
+/* 自訂模式：每次改動都另外記一份，選回「自訂」時還原（逐段調整也一起記） */
+function rememberCustom(){if(S.preset!=='custom')return;const c={};KEYS.forEach(k=>c[k]=S[k]);c.custom=S.custom?S.custom.map(x=>Object.assign({},x)):null;S.saved=c}
+const save=()=>{rememberCustom();store.set('tabata_settings',S)};
 
 const FIELDS=[
   ['prep','準備','開始前的倒數','s',0,120,5,'prep'],
@@ -256,7 +259,8 @@ function durEn(s){const m=Math.floor(s/60),r=s%60;return [m?m+(m>1?' minutes':' 
 function toast(t){const e=$('toast');e.textContent=t;e.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('on'),2000)}
 
 /* ---------- 畫面 ---------- */
-function renderPresets(){[...$('presets').children].forEach(b=>b.classList.toggle('on',b.dataset.p===S.preset))}
+function renderPresets(){[...$('presets').children].forEach(b=>b.classList.toggle('on',b.dataset.p===S.preset));
+  const c=S.saved;$('customSum').textContent=c?('上次：'+c.work+' 秒／'+c.rest+' 秒 × '+c.rounds+(c.sets>1?'，'+c.sets+' 組':'')+(c.custom?'，含逐段調整':'')):'每一段長度自己決定'}
 function renderTimes(){
   $('times').innerHTML=FIELDS.map(([k,label,hint,u,min,max,step,ph])=>
     '<div class="item"><div class="l"><b>'+(ph?'<span class="dot" style="background:var(--'+ph+')"></span>':'')+label+'</b><span>'+hint+'</span></div>'+
@@ -294,13 +298,18 @@ function renderAll(){
 }
 
 /* ---------- 互動 ---------- */
-$('presets').onclick=e=>{const b=e.target.closest('button');if(!b)return;const p=b.dataset.p;S.preset=p;if(PRESETS[p])Object.assign(S,PRESETS[p]);S.custom=null;save();renderAll()};
+$('presets').onclick=e=>{const b=e.target.closest('button');if(!b)return;const p=b.dataset.p;
+  if(p===S.preset&&p==='custom')return;
+  S.preset=p;
+  if(PRESETS[p]){Object.assign(S,PRESETS[p]);S.custom=null}
+  else if(S.saved){KEYS.forEach(k=>{if(S.saved[k]!==undefined)S[k]=S.saved[k]});S.custom=S.saved.custom?S.saved.custom.map(x=>Object.assign({},x)):null;toast('已還原上次的自訂時間')}
+  save();renderAll()};
 function clampNum(v,min,max){v=parseInt(v,10);if(isNaN(v))v=min;return Math.min(max,Math.max(min,v))}
 $('times').addEventListener('click',e=>{const b=e.target.closest('button[data-d]');if(!b)return;const st=b.parentNode;const k=st.dataset.k;
   S[k]=clampNum(S[k]+(+b.dataset.d)*(+st.dataset.step),+st.dataset.min,+st.dataset.max);changed()});
 $('times').addEventListener('change',e=>{const st=e.target.closest('.step');if(!st)return;S[st.dataset.k]=clampNum(e.target.value,+st.dataset.min,+st.dataset.max);changed()});
 function changed(){if(S.custom){S.custom=null;toast('時間設定改了，逐段調整已重新產生')}S.preset='custom';save();renderPresets();renderTimes();renderPlan()}
-$('exList').onchange=e=>{S.ex=e.target.value.trim();S.custom=null;save();renderPlan()};
+$('exList').onchange=e=>{S.ex=e.target.value.trim();S.custom=null;if(S.preset!=='custom'&&PRESETS[S.preset]&&S.ex!==PRESETS[S.preset].ex){S.preset='custom';renderPresets()}save();renderPlan()};
 $('segList').addEventListener('click',e=>{const b=e.target.closest('button[data-d]');if(!b)return;const i=+b.parentNode.dataset.i;editSeg(i,segs()[i].s+(+b.dataset.d))});
 $('segList').addEventListener('change',e=>{const st=e.target.closest('.step');if(!st)return;editSeg(+st.dataset.i,parseInt(e.target.value,10))});
 function editSeg(i,v){const g=segs().map(x=>Object.assign({},x));g[i].s=clampNum(v,1,900);S.custom=g;S.preset='custom';save();renderPresets();renderPlan()}
