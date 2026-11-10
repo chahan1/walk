@@ -212,7 +212,9 @@ details.edit[open] summary::after{content:"收合"}
       <div class="item"><div class="l"><b>語音提示</b><span>每段開始時說出動作</span></div><input type="checkbox" class="tg" id="sVoice"></div>
       <div class="item"><div class="l"><b>語音語言</b></div><div class="seg" id="langSeg" style="width:150px"><button data-v="zh">中文</button><button data-v="en">English</button></div></div>
       <div class="item"><div class="l"><b>嗶聲倒數</b><span>每段最後 3 秒</span></div><input type="checkbox" class="tg" id="sBeep"></div>
-      <div class="item"><div class="l"><b>震動</b><span>Android，螢幕亮著時</span></div><input type="checkbox" class="tg" id="sVib"></div>
+      <div class="item"><div class="l"><b>換段震動</b><span>運動開始震三下、休息開始震一長聲，最後 3 秒短震倒數（Android）</span></div><input type="checkbox" class="tg" id="sVib"></div>
+      <div class="item"><div class="l"><b>鎖螢幕時用通知震動</b><span>螢幕關閉時改發通知，手機和小米手環都會震動</span></div><input type="checkbox" class="tg" id="sNotify"></div>
+      <div class="item"><div class="l"><b>通知權限</b><span id="nStatus"></span></div><button class="btn ghost" id="btnPerm" style="padding:8px 12px;font-size:13px">允許通知</button></div>
       <div class="item block-row"><div class="l"><b>外觀</b></div>
         <div class="seg" id="themeSeg"><button data-v="auto">跟隨手機</button><button data-v="light">淺色</button><button data-v="dark">深色</button></div></div>
     </div>
@@ -262,7 +264,7 @@ const PRESETS={
   adidas:{prep:10,work:20,rest:10,rounds:8,sets:3,setRest:60,cool:0,ex:'波比跳，側弓步'},
   easy:{prep:10,work:20,rest:20,rounds:8,sets:1,setRest:60,cool:0,ex:''}
 };
-const DEF={preset:'classic',...PRESETS.classic,adv:'auto',voice:true,lang:'zh',beep:true,vib:true,custom:null};
+const DEF={preset:'classic',...PRESETS.classic,adv:'auto',voice:true,lang:'zh',beep:true,vib:true,notify:true,custom:null};
 let S=Object.assign({},DEF,store.get('tabata_settings',{}));
 const KEYS=['prep','work','rest','rounds','sets','setRest','cool','ex'];
 /* 自訂模式：每次改動都另外記一份，選回「自訂」時還原（逐段調整也一起記） */
@@ -342,7 +344,7 @@ function renderAdv(){
 }
 function renderAll(){
   renderPresets();renderTimes();renderPlan();renderAdv();
-  $('exList').value=S.ex||'';$('sVoice').checked=S.voice;$('sBeep').checked=S.beep;$('sVib').checked=S.vib;
+  $('exList').value=S.ex||'';$('sVoice').checked=S.voice;$('sBeep').checked=S.beep;$('sVib').checked=S.vib;$('sNotify').checked=S.notify!==false;renderNotify();
   renderSeg('langSeg',S.lang);renderSeg('themeSeg',themeMode());
 }
 
@@ -364,7 +366,19 @@ $('segList').addEventListener('change',e=>{const st=e.target.closest('.step');if
 function editSeg(i,v){const g=segs().map(x=>Object.assign({},x));g[i].s=clampNum(v,1,900);S.custom=g;S.preset='custom';save();renderPresets();renderPlan()}
 $('advSeg').onclick=e=>{const b=e.target.closest('button');if(!b)return;S.adv=b.dataset.v;save();renderAdv();renderPlan()};
 $('langSeg').onclick=e=>{const b=e.target.closest('button');if(!b)return;S.lang=b.dataset.v;save();renderSeg('langSeg',S.lang)};
-['Voice','Beep','Vib'].forEach(k=>$('s'+k).onchange=e=>{S[k.toLowerCase()]=e.target.checked;save()});
+['Voice','Beep','Vib','Notify'].forEach(k=>$('s'+k).onchange=e=>{S[k.toLowerCase()]=e.target.checked;save()});
+/* 通知：螢幕關閉時由系統震動（手機、小米手環） */
+function renderNotify(){const el=$('nStatus');if(!('Notification' in window)){el.textContent='這個瀏覽器不支援通知';return}
+  el.textContent={granted:'已允許',denied:'被封鎖，請到手機設定 → 應用程式 → Chrome → 通知開啟',default:'還沒允許'}[Notification.permission]||''}
+$('btnPerm').onclick=async()=>{if(!('Notification' in window))return;try{await Notification.requestPermission()}catch(e){}renderNotify()};
+const VIB={work:[400,120,400,120,400],rest:[700],setrest:[300,150,300],prep:[200],cool:[700],end:[300,150,300,150,600]};
+async function notify(title,body,pattern){
+  if(S.notify===false||!('Notification' in window)||Notification.permission!=='granted')return;
+  const opt={body,tag:'tabata',renotify:true,vibrate:pattern,silent:false,icon:'icon-192.png',badge:'icon-192.png'};
+  try{const reg=navigator.serviceWorker&&await navigator.serviceWorker.getRegistration();if(reg){await reg.showNotification(title,opt);return}}catch(e){}
+  try{new Notification(title,opt)}catch(e){}
+}
+if('serviceWorker' in navigator){try{navigator.serviceWorker.register('sw.js').catch(()=>{})}catch(e){}}
 function themeMode(){try{const v=localStorage.getItem('tabata_theme');return v==='light'||v==='dark'?v:'auto'}catch(e){return 'auto'}}
 $('themeSeg').onclick=e=>{const b=e.target.closest('button');if(!b)return;const t=b.dataset.v;
   try{t==='auto'?localStorage.removeItem('tabata_theme'):localStorage.setItem('tabata_theme',t)}catch(err){}
@@ -452,7 +466,8 @@ function enter(i){
   const zh=PH[x.t].zh+(x.t==='work'&&x.name?'，'+x.name:'')+'，'+durZh(x.s);
   const en=PH[x.t].en+(x.t==='work'&&x.name?', '+x.name:'')+', '+durEn(x.s);
   say(zh,en);
-  vib(x.t==='work'?[250,100,250]:[300]);
+  if(document.visibilityState==='hidden')notify(PH[x.t].zh+(x.t==='work'&&x.name?'：'+x.name:'')+'　'+durZh(x.s),(x.round?'第 '+x.round+'／'+S.rounds+' 回合':'')+(S.sets>1&&x.set?'，第 '+x.set+'／'+S.sets+' 組':''),VIB[x.t]);
+  else vib(VIB[x.t]);
   if(R.mode!=='audio')beep(x.t==='work'?1046:620,280);
 }
 function nextWorkName(i){for(let j=i+1;j<R.g.length;j++)if(R.g[j].t==='work')return R.g[j].name?'下一個：'+R.g[j].name:'';return ''}
@@ -477,6 +492,7 @@ function tick(){
 }
 function cueTail(rem,x){
   const c=R.cues,sec=Math.ceil(rem);
+  if(sec<=3&&sec>=1&&!c['v'+sec]&&document.visibilityState==='visible'){c['v'+sec]=1;vib([80])}
   if(x.t==='work'&&x.s>=20&&rem<=x.s/2&&!c.half){c.half=1;say('一半了','Halfway')}
   if(R.mode!=='audio'&&sec<=3&&sec>=1&&!c['b'+sec]){c['b'+sec]=1;beep(880,110)}
 }
@@ -486,7 +502,7 @@ function segDone(){
   if(!next){finish(true);return}
   const needWait=S.adv==='each'||(S.adv==='set'&&(next.t==='setrest'||R.g[i].t==='setrest'||next.t==='cool'));
   if(needWait){
-    R.waiting=true;beep(660,200);vib([200]);
+    R.waiting=true;beep(660,200);if(document.visibilityState==='hidden')notify('本段完成','回到 App 按「開始下一段」',[200,100,200]);else vib([200,100,200]);
     $('waitTxt').textContent='下一段：'+PH[next.t].zh+(next.t==='work'&&next.name?'：'+next.name:'')+'，'+durZh(next.s);
     $('bWait').textContent='開始下一段';$('wait').classList.add('on');
     say('準備好就按開始','Tap start when ready');
@@ -518,7 +534,7 @@ function finish(done){
   if(!R||R.done)return;R.done=true;clearInterval(R.timer);release();
   try{R.audio&&R.audio.pause()}catch(e){}
   try{R.url&&URL.revokeObjectURL(R.url)}catch(e){}
-  if(done){say('完成了，記得緩和和伸展','Done. Cool down and stretch.');vib([300,150,300,150,500]);if(R.mode!=='audio'){beep(784,200);setTimeout(()=>beep(1046,350),220)}}
+  if(done){say('完成了，記得緩和和伸展','Done. Cool down and stretch.');if(document.visibilityState==='hidden')notify('Tabata 完成','記得緩和和伸展',VIB.end);else vib(VIB.end);if(R.mode!=='audio'){beep(784,200);setTimeout(()=>beep(1046,350),220)}}
   $('runner').classList.remove('on');$('wait').classList.remove('on');document.body.style.overflow='';$('bStop').textContent='結束';
   try{document.querySelector('meta[name=theme-color]').setAttribute('content','#1C2B27')}catch(e){}
   if(done)toast('完成 '+R.g.filter(x=>x.t==='work').length+' 個運動段');
