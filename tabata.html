@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1C2B27">
+<meta name="description" content="Tabata 間歇時間指導器：可用預設模式自動計時，也能手動開始下一段，每一段長度都能自由設定。">
+<title>Tabata 時間指導器</title>
+<script>try{var t=localStorage.getItem("tabata_theme");if(t==="light"||t==="dark")document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&display=swap" rel="stylesheet">
+<style>
+/* Hallmark v2.0.0 (condensed) | shape: app screen | screen: Tabata interval timer with presets, manual advance and per-interval editing | signature: the countdown ring on a full-colour phase screen, readable from the floor | tokens: bg, surface, ink, sub, line + five phase colours | type: system CJK + Barlow Condensed numerals */
+/* critique: phase colour is the only loud thing; everything else stays quiet so the timer reads from two metres away */
+:root{
+  color-scheme:light dark;
+  --bg:#F4F6F3; --surface:#FCFDFB; --ink:#1C2B27; --sub:#5F726A; --line:#DCE4DE; --soft:#E8EEE9;
+  --work:#C4431F; --rest:#287565; --setrest:#3F6FAE; --prep:#966207; --cool:#61726B; --on-phase-ink:#1C2B27;
+  --on-phase:#FFFBF7; --veil:rgba(0,0,0,.14); --veil-strong:rgba(0,0,0,.24); --knob:#FCFDFB; --knob-shadow:rgba(0,0,0,.25);
+  --num:'Barlow Condensed','Roboto Condensed','Arial Narrow',sans-serif;
+  --cjk:-apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;
+}
+:root[data-theme="light"]{color-scheme:light}
+:root[data-theme="dark"]{color-scheme:dark;--bg:#121A17;--surface:#1B2622;--ink:#E6EEEA;--sub:#9AADA5;--line:#2B3A34;--soft:#22302B;--work:#C9472A;--rest:#2A7A6A;--setrest:#3B67A3;--prep:#8A5B08;--cool:#5E6F69}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;--bg:#121A17;--surface:#1B2622;--ink:#E6EEEA;--sub:#9AADA5;--line:#2B3A34;--soft:#22302B;--work:#C9472A;--rest:#2A7A6A;--setrest:#3B67A3;--prep:#8A5B08;--cool:#5E6F69}}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{overflow-x:clip;background:var(--bg);color:var(--ink);font-family:var(--cjk);font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased}
+body{padding:env(safe-area-inset-top) env(safe-area-inset-right) calc(24px + env(safe-area-inset-bottom)) env(safe-area-inset-left)}
+button,select,input{font-family:inherit;color:inherit}
+button{cursor:pointer}
+button:active{transform:scale(.97)}
+button:disabled{cursor:not-allowed;color:var(--sub);background:var(--soft)}
+:where(button,a,input,select,summary):focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.num{font-family:var(--num);font-variant-numeric:tabular-nums}
+.wrap{max-width:480px;margin:0 auto;padding:12px 16px}
+.top{display:flex;justify-content:space-between;align-items:center;padding:4px 0 12px}
+.top h1{font-size:20px;font-weight:700;text-wrap:balance}
+.top a{font-size:13px;color:var(--sub);text-decoration:none}
+.sub{color:var(--sub);font-size:13px}
+h2{font-size:14px;font-weight:700;margin:20px 0 8px}
+
+/* presets */
+.presets{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.presets button{text-align:left;border:0;border-radius:14px;padding:12px;background:var(--surface);box-shadow:inset 0 0 0 1px var(--line)}
+.presets button b{display:block;font-size:14px;white-space:nowrap}
+.presets button span{display:block;font-size:12px;color:var(--sub);margin-top:4px}
+.presets button.on{box-shadow:inset 0 0 0 2px var(--ink)}
+
+/* summary bar of the plan */
+.plan{background:var(--surface);border-radius:16px;padding:16px;margin-top:12px;box-shadow:inset 0 0 0 1px var(--line)}
+.strip{display:flex;height:28px;border-radius:8px;overflow:hidden;gap:1px;background:var(--line)}
+.strip i{display:block;height:100%}
+.facts{display:flex;justify-content:space-between;margin-top:8px;font-size:12px;color:var(--sub)}
+.facts b{display:block;font-family:var(--num);font-size:22px;font-weight:600;color:var(--ink);line-height:1.1}
+
+/* settings rows */
+.group{background:var(--surface);border-radius:16px;padding:4px 16px;box-shadow:inset 0 0 0 1px var(--line)}
+.item{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 0;border-top:1px solid var(--line)}
+.item:first-child{border-top:0}
+.item .l b{display:flex;align-items:center;font-size:14px;font-weight:600}
+.item .l span{display:block;font-size:12px;color:var(--sub)}
+.dot{display:inline-block;width:8px;height:8px;border-radius:3px;margin-right:8px;vertical-align:1px}
+.step{display:flex;align-items:center;gap:8px}
+.step button{width:36px;height:36px;border-radius:10px;border:0;background:var(--soft);font-size:18px;line-height:1}
+.step input{width:56px;height:36px;text-align:center;border:1px solid var(--line);border-radius:10px;background:var(--bg);font-family:var(--num);font-size:18px}
+.step em{font-style:normal;font-size:12px;color:var(--sub);min-width:14px}
+.seg{display:flex;gap:4px;padding:4px;border-radius:12px;background:var(--soft)}
+.seg button{flex:1;border:0;background:transparent;border-radius:9px;padding:8px 4px;font-size:13px;color:var(--sub)}
+.seg button.on{background:var(--surface);color:var(--ink);font-weight:600;box-shadow:inset 0 0 0 1.5px var(--ink)}
+.block-row{display:block}
+.block-row .seg{margin-top:8px}
+input[type=text]{width:100%;height:38px;border:1px solid var(--line);border-radius:10px;background:var(--bg);padding:0 8px;font-size:14px}
+input[type=checkbox].tg{appearance:none;-webkit-appearance:none;flex:none;width:42px;height:24px;border-radius:12px;background:var(--line);position:relative;transition:background .2s}
+input[type=checkbox].tg::after{content:"";position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;background:var(--knob);box-shadow:0 1px 3px var(--knob-shadow);transition:transform .2s}
+input[type=checkbox].tg:checked{background:var(--rest)}
+input[type=checkbox].tg:checked::after{transform:translateX(18px)}
+
+/* per-interval editor */
+details.edit{margin-top:12px;background:var(--surface);border-radius:16px;padding:0 16px;box-shadow:inset 0 0 0 1px var(--line)}
+details.edit summary{list-style:none;padding:12px 0;font-size:14px;font-weight:600;display:flex;justify-content:space-between}
+details.edit summary::-webkit-details-marker{display:none}
+details.edit summary::after{content:"展開";font-weight:400;color:var(--sub);font-size:13px}
+details.edit[open] summary::after{content:"收合"}
+.seglist{max-height:360px;overflow:auto;padding-bottom:8px}
+.seglist .row{display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--line);font-size:13px}
+.seglist .row .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.seglist .row .step button{width:30px;height:30px;font-size:15px}
+.seglist .row .step input{width:48px;height:30px;font-size:16px}
+.edited{font-size:12px;color:var(--work);margin:4px 0 8px}
+.btn{border:0;border-radius:12px;padding:8px 16px;font-size:14px;font-weight:600;background:var(--ink);color:var(--bg)}
+.btn.ghost{background:transparent;color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.go{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;height:54px;margin-top:16px;border:0;border-radius:27px;background:var(--work);color:var(--on-phase);font-size:17px;font-weight:700}
+.go svg{width:18px;height:18px;fill:currentColor}
+.notes{margin-top:20px;font-size:13px;color:var(--sub)}
+.notes p{margin:8px 0}
+.notes b{color:var(--ink)}
+
+/* runner */
+#runner{position:fixed;inset:0;z-index:20;display:none;flex-direction:column;background:var(--prep);color:var(--on-phase);transition:background .35s;padding:calc(12px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom))}
+#runner.on{display:flex}
+.r-top{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;opacity:.9}
+.r-top .num{font-size:16px}
+.r-strip{display:flex;height:6px;gap:4px;margin-top:8px}
+.r-strip i{flex:1;border-radius:3px;background:var(--veil)}
+.r-strip i.done{background:var(--on-phase)}
+.r-strip i.now{background:var(--on-phase);opacity:.55}
+.r-main{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+#rPhase{font-size:30px;font-weight:700}
+#rEx{font-size:18px;opacity:.92;min-height:28px;margin-top:4px}
+.ring{position:relative;width:min(78vw,340px);aspect-ratio:1;margin:16px 0}
+.ring svg{width:100%;height:100%;transform:rotate(-90deg)}
+.ring circle{fill:none;stroke-width:10}
+.ring .trk{stroke:var(--veil)}
+.ring .bar{stroke:var(--on-phase);stroke-linecap:round;transition:stroke-dashoffset .25s linear}
+#rTime{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--num);font-weight:600;font-size:min(30vw,140px);font-variant-numeric:tabular-nums;line-height:1}
+#rCount{font-size:15px;opacity:.92}
+#rNext{display:flex;justify-content:space-between;align-items:baseline;width:100%;background:var(--veil);border-radius:12px;padding:8px 16px;font-size:14px;margin-bottom:8px}
+#rNext .num{font-size:18px}
+.ctrl{display:grid;grid-template-columns:1fr 1.4fr 1fr;gap:8px}
+.ctrl button{height:52px;border-radius:26px;border:1.5px solid var(--on-phase);background:transparent;color:var(--on-phase);font-size:15px;font-weight:600}
+.ctrl button.main{background:var(--on-phase);color:var(--on-phase-ink)}
+#wait{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:inherit;text-align:center;padding:24px}
+#wait.on{display:flex}
+#wait p{font-size:15px}
+#wait button{min-width:240px;height:64px;border-radius:32px;border:0;background:var(--on-phase);color:var(--on-phase-ink);font-size:18px;font-weight:700}
+.paused #rTime{opacity:.45}
+.toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 16px;border-radius:12px;font-size:13px;z-index:50;opacity:0;transition:opacity .25s;pointer-events:none}
+.toast.on{opacity:.96}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top"><h1>Tabata 時間指導器</h1><a href="./">回間歇快走慢跑</a></div>
+
+  <div class="presets" id="presets">
+    <button data-p="classic"><b>經典 Tabata</b><span>20 秒／10 秒 × 8，約 4 分鐘</span></button>
+    <button data-p="adidas"><b>adidas 15 分鐘</b><span>兩個動作交替，3 組，組間 1 分鐘</span></button>
+    <button data-p="easy"><b>入門版</b><span>20 秒／20 秒 × 8，強度較低</span></button>
+    <button data-p="custom"><b>自訂</b><span>每一段長度自己決定</span></button>
+  </div>
+
+  <div class="plan">
+    <div class="strip" id="strip" aria-hidden="true"></div>
+    <div class="facts" id="facts"></div>
+  </div>
+
+  <h2>時間設定</h2>
+  <div class="group" id="times"></div>
+
+  <h2>動作（運動段依序輪流）</h2>
+  <div class="group">
+    <div class="item block-row"><div class="l"><b>動作名稱</b><span>用逗號分開，例如：開合跳，深蹲。留空就只顯示「運動」</span></div>
+      <input type="text" id="exList" style="margin-top:8px" placeholder="開合跳，深蹲"></div>
+  </div>
+
+  <h2>下一段怎麼開始</h2>
+  <div class="group">
+    <div class="item block-row"><div class="l"><b>開始方式</b><span id="advHint"></span></div>
+      <div class="seg" id="advSeg"><button data-v="auto">自動接續</button><button data-v="set">每組結束等我</button><button data-v="each">每段都等我</button></div></div>
+  </div>
+
+  <details class="edit" id="editBox"><summary>逐段調整長度</summary>
+    <p class="sub">每一段都可以單獨改秒數，例如最後一回合多休息一點。改過之後，上面的時間設定變動會重新產生並清掉逐段調整。</p>
+    <div id="editedNote"></div>
+    <div class="seglist" id="segList"></div>
+  </details>
+
+  <h2>提示</h2>
+  <div class="group">
+    <div class="item"><div class="l"><b>語音提示</b><span>每段開始時說出動作</span></div><input type="checkbox" class="tg" id="sVoice"></div>
+    <div class="item"><div class="l"><b>語音語言</b></div><div class="seg" id="langSeg" style="width:150px"><button data-v="zh">中文</button><button data-v="en">English</button></div></div>
+    <div class="item"><div class="l"><b>嗶聲倒數</b><span>每段最後 3 秒</span></div><input type="checkbox" class="tg" id="sBeep"></div>
+    <div class="item"><div class="l"><b>震動</b><span>Android，螢幕亮著時</span></div><input type="checkbox" class="tg" id="sVib"></div>
+    <div class="item block-row"><div class="l"><b>外觀</b></div>
+      <div class="seg" id="themeSeg"><button data-v="auto">跟隨手機</button><button data-v="light">淺色</button><button data-v="dark">深色</button></div></div>
+  </div>
+
+  <button class="go" id="btnGo"></button>
+
+  <div class="notes">
+    <p><b>Tabata 是什麼</b>　1996 年田畑泉教授以日本競速滑冰選手做的研究：全力運動 20 秒、休息 10 秒，共 8 回合，4 分鐘就同時提升有氧與無氧能力。原始研究用的是飛輪，現在多用徒手動作。</p>
+    <p><b>adidas 的做法</b>　每組選兩個動作交替（例如波比跳和側弓步），做 3 組、組間休息約 1 分鐘，全長約 15 分鐘。強度至少達最大心率的 75%（220 − 年齡 × 0.75）；還能輕鬆聊天就是不夠用力。</p>
+    <p><b>安全</b>　先暖身 5 分鐘，結束後緩和 3～10 分鐘。選自己做得標準的動作。剛開始可以先用入門版，每週 1～4 次，中間隔一天。有心血管疾病或高血壓請先問醫師。</p>
+  </div>
+</div>
+
+<!-- runner -->
+<div id="runner" role="timer" aria-live="polite">
+  <div class="r-top"><span id="rTitle"></span><span class="num" id="rLeft"></span></div>
+  <div class="r-strip" id="rStrip" aria-hidden="true"></div>
+  <div class="r-main">
+    <div id="rPhase">準備</div>
+    <div id="rEx"></div>
+    <div class="ring"><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="trk" cx="60" cy="60" r="52"/><circle class="bar" id="rBar" cx="60" cy="60" r="52"/></svg><div id="rTime">10</div></div>
+    <div id="rCount"></div>
+  </div>
+  <div id="rNext"></div>
+  <div class="ctrl"><button id="bStop">結束</button><button class="main" id="bPause">暫停</button><button id="bSkip">下一段</button></div>
+  <div id="wait"><p class="num" id="waitBig" style="font-size:22px;opacity:.9">本段完成</p><p id="waitTxt"></p><button id="bWait">開始</button><p class="sub" style="color:inherit;opacity:.85" id="waitSub">準備好了再按</p></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+'use strict';
+const $=id=>document.getElementById(id);
+const store={get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+
+/* ---------- 設定與預設模式 ---------- */
+const PRESETS={
+  classic:{prep:10,work:20,rest:10,rounds:8,sets:1,setRest:60,cool:0,ex:''},
+  adidas:{prep:10,work:20,rest:10,rounds:8,sets:3,setRest:60,cool:0,ex:'波比跳，側弓步'},
+  easy:{prep:10,work:20,rest:20,rounds:8,sets:1,setRest:60,cool:0,ex:''}
+};
+const DEF={preset:'classic',...PRESETS.classic,adv:'auto',voice:true,lang:'zh',beep:true,vib:true,custom:null};
+let S=Object.assign({},DEF,store.get('tabata_settings',{}));
+const save=()=>store.set('tabata_settings',S);
+
+const FIELDS=[
+  ['prep','準備','開始前的倒數','s',0,120,5,'prep'],
+  ['work','運動','全力的時間','s',5,300,5,'work'],
+  ['rest','休息','每回合之間','s',0,300,5,'rest'],
+  ['rounds','回合數','每組幾回合','',1,30,1,null],
+  ['sets','組數','做幾組','',1,10,1,null],
+  ['setRest','組間休息','每組之間','s',0,600,10,'setrest'],
+  ['cool','緩和','全部結束後慢慢走動','s',0,900,30,'cool']
+];
+const PH={prep:{zh:'準備',en:'Get ready'},work:{zh:'運動',en:'Work'},rest:{zh:'休息',en:'Rest'},setrest:{zh:'組間休息',en:'Set rest'},cool:{zh:'緩和',en:'Cool down'}};
+const colorOf=t=>getComputedStyle(document.documentElement).getPropertyValue('--'+t).trim();
+
+function exercises(){return (S.ex||'').split(/[,，、]/).map(x=>x.trim()).filter(Boolean)}
+function generate(){
+  const ex=exercises();let out=[],n=0;
+  if(S.prep>0)out.push({t:'prep',s:S.prep});
+  for(let set=1;set<=S.sets;set++){
+    for(let r=1;r<=S.rounds;r++){
+      out.push({t:'work',s:S.work,round:r,set,name:ex.length?ex[n%ex.length]:''});n++;
+      const last=r===S.rounds;
+      if(!last&&S.rest>0)out.push({t:'rest',s:S.rest,round:r,set});
+      if(last&&set<S.sets&&S.setRest>0)out.push({t:'setrest',s:S.setRest,set});
+    }
+  }
+  if(S.cool>0)out.push({t:'cool',s:S.cool});
+  return out;
+}
+function segs(){return S.custom&&S.custom.length?S.custom:generate()}
+const sum=a=>a.reduce((x,g)=>x+g.s,0);
+const mmss=s=>{s=Math.max(0,Math.ceil(s));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
+function durZh(s){const m=Math.floor(s/60),r=s%60;return (m?m+' 分':'')+(r||!m?r+' 秒':'')}
+function durEn(s){const m=Math.floor(s/60),r=s%60;return [m?m+(m>1?' minutes':' minute'):'',r?r+' seconds':''].filter(Boolean).join(' ')}
+function toast(t){const e=$('toast');e.textContent=t;e.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('on'),2000)}
+
+/* ---------- 畫面 ---------- */
+function renderPresets(){[...$('presets').children].forEach(b=>b.classList.toggle('on',b.dataset.p===S.preset))}
+function renderTimes(){
+  $('times').innerHTML=FIELDS.map(([k,label,hint,u,min,max,step,ph])=>
+    '<div class="item"><div class="l"><b>'+(ph?'<span class="dot" style="background:var(--'+ph+')"></span>':'')+label+'</b><span>'+hint+'</span></div>'+
+    '<div class="step" data-k="'+k+'" data-min="'+min+'" data-max="'+max+'" data-step="'+step+'"><button data-d="-1" aria-label="'+label+'減少">−</button><input class="num" inputmode="numeric" value="'+S[k]+'" aria-label="'+label+'"><button data-d="1" aria-label="'+label+'增加">＋</button><em>'+(u?'秒':'')+'</em></div></div>').join('');
+}
+function renderPlan(){
+  const g=segs(),tot=sum(g);
+  $('strip').innerHTML=g.map(x=>'<i style="flex:'+x.s+';background:var(--'+x.t+')"></i>').join('');
+  const works=g.filter(x=>x.t==='work'),workS=sum(works);
+  $('facts').innerHTML='<div><b>'+mmss(tot)+'</b>全長</div><div><b>'+works.length+'</b>運動段</div><div><b>'+mmss(workS)+'</b>運動時間</div><div><b>'+(S.custom?'自訂':S.sets)+'</b>'+(S.custom?'逐段':'組')+'</div>';
+  $('btnGo').innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></svg>開始 <span class="num">'+mmss(tot)+'</span>';
+  renderSegList(g);
+}
+function segLabel(x){
+  if(x.t==='work')return (x.set&&S.sets>1?'第 '+x.set+' 組 ':'')+'第 '+x.round+' 回合 運動'+(x.name?'：'+x.name:'');
+  if(x.t==='rest')return '休息';
+  return PH[x.t].zh;
+}
+function renderSegList(g){
+  $('editedNote').innerHTML=S.custom?'<p class="edited">已逐段調整。<button class="btn ghost" id="bReset" style="padding:4px 10px;font-size:12px;margin-left:6px">還原成上面的設定</button></p>':'';
+  if(S.custom)$('bReset').onclick=()=>{S.custom=null;save();renderPlan()};
+  $('segList').innerHTML=g.map((x,i)=>'<div class="row"><span class="dot" style="background:var(--'+x.t+')"></span><span class="nm">'+esc(segLabel(x))+'</span>'+
+    '<div class="step" data-i="'+i+'"><button data-d="-5" aria-label="減 5 秒">−</button><input class="num" inputmode="numeric" value="'+x.s+'" aria-label="秒數"><button data-d="5" aria-label="加 5 秒">＋</button><em>秒</em></div></div>').join('');
+}
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+function renderSeg(id,val){[...$(id).children].forEach(b=>b.classList.toggle('on',b.dataset.v===val))}
+function renderAdv(){
+  renderSeg('advSeg',S.adv);
+  $('advHint').textContent={auto:'照設定一路自動進行，可以關閉螢幕。',set:'每組做完會停下來，按「開始」才進入下一組。',each:'每一段結束都停下來，按「開始」才計算下一段。'}[S.adv];
+}
+function renderAll(){
+  renderPresets();renderTimes();renderPlan();renderAdv();
+  $('exList').value=S.ex||'';$('sVoice').checked=S.voice;$('sBeep').checked=S.beep;$('sVib').checked=S.vib;
+  renderSeg('langSeg',S.lang);renderSeg('themeSeg',themeMode());
+}
+
+/* ---------- 互動 ---------- */
+$('presets').onclick=e=>{const b=e.target.closest('button');if(!b)return;const p=b.dataset.p;S.preset=p;if(PRESETS[p])Object.assign(S,PRESETS[p]);S.custom=null;save();renderAll()};
+function clampNum(v,min,max){v=parseInt(v,10);if(isNaN(v))v=min;return Math.min(max,Math.max(min,v))}
+$('times').addEventListener('click',e=>{const b=e.target.closest('button[data-d]');if(!b)return;const st=b.parentNode;const k=st.dataset.k;
+  S[k]=clampNum(S[k]+(+b.dataset.d)*(+st.dataset.step),+st.dataset.min,+st.dataset.max);changed()});
+$('times').addEventListener('change',e=>{const st=e.target.closest('.step');if(!st)return;S[st.dataset.k]=clampNum(e.target.value,+st.dataset.min,+st.dataset.max);changed()});
+function changed(){if(S.custom){S.custom=null;toast('時間設定改了，逐段調整已重新產生')}S.preset='custom';save();renderPresets();renderTimes();renderPlan()}
+$('exList').onchange=e=>{S.ex=e.target.value.trim();S.custom=null;save();renderPlan()};
+$('segList').addEventListener('click',e=>{const b=e.target.closest('button[data-d]');if(!b)return;const i=+b.parentNode.dataset.i;editSeg(i,segs()[i].s+(+b.dataset.d))});
+$('segList').addEventListener('change',e=>{const st=e.target.closest('.step');if(!st)return;editSeg(+st.dataset.i,parseInt(e.target.value,10))});
+function editSeg(i,v){const g=segs().map(x=>Object.assign({},x));g[i].s=clampNum(v,1,900);S.custom=g;S.preset='custom';save();renderPresets();renderPlan()}
+$('advSeg').onclick=e=>{const b=e.target.closest('button');if(!b)return;S.adv=b.dataset.v;save();renderAdv()};
+$('langSeg').onclick=e=>{const b=e.target.closest('button');if(!b)return;S.lang=b.dataset.v;save();renderSeg('langSeg',S.lang)};
+['Voice','Beep','Vib'].forEach(k=>$('s'+k).onchange=e=>{S[k.toLowerCase()]=e.target.checked;save()});
+function themeMode(){try{const v=localStorage.getItem('tabata_theme');return v==='light'||v==='dark'?v:'auto'}catch(e){return 'auto'}}
+$('themeSeg').onclick=e=>{const b=e.target.closest('button');if(!b)return;const t=b.dataset.v;
+  try{t==='auto'?localStorage.removeItem('tabata_theme'):localStorage.setItem('tabata_theme',t)}catch(err){}
+  if(t==='auto')document.documentElement.removeAttribute('data-theme');else document.documentElement.setAttribute('data-theme',t);
+  renderSeg('themeSeg',t);renderPlan()};
+
+/* ---------- 聲音 ---------- */
+let AC=null;
+function beep(f,ms,vol){if(!S.beep)return;try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();const o=AC.createOscillator(),g=AC.createGain();o.frequency.value=f;g.gain.value=vol||.25;o.connect(g);g.connect(AC.destination);o.start();g.gain.exponentialRampToValueAtTime(.001,AC.currentTime+ms/1000);o.stop(AC.currentTime+ms/1000+.02)}catch(e){}}
+let voices={zh:null,en:null};
+function pickVoices(){try{const vs=speechSynthesis.getVoices();voices.zh=vs.find(v=>/zh[-_]TW/i.test(v.lang))||vs.find(v=>/^zh/i.test(v.lang))||null;voices.en=vs.find(v=>/en[-_]US/i.test(v.lang))||vs.find(v=>/^en/i.test(v.lang))||null}catch(e){}}
+try{pickVoices();speechSynthesis.onvoiceschanged=pickVoices}catch(e){}
+function say(zh,en){if(!S.voice)return;const E=S.lang==='en';try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(E?en:zh);const v=E?voices.en:voices.zh;u.lang=v?v.lang:(E?'en-US':'zh-TW');if(v)u.voice=v;speechSynthesis.speak(u)}catch(e){}}
+function vib(p){if(S.vib&&navigator.vibrate)try{navigator.vibrate(p)}catch(e){}}
+let lock=null;
+async function keepAwake(){try{if('wakeLock' in navigator)lock=await navigator.wakeLock.request('screen')}catch(e){}}
+function release(){try{lock&&lock.release()}catch(e){}lock=null}
+document.addEventListener('visibilitychange',()=>{if(R&&!R.paused&&document.visibilityState==='visible')keepAwake()});
+
+/* 自動模式：整堂課做成一條音軌（含提示音），關螢幕也照常計時 */
+const CUE={work:[[0,1046,.12],[.16,1046,.12],[.32,1318,.35]],rest:[[0,660,.25],[.3,523,.4]],setrest:[[0,784,.25],[.3,587,.25],[.6,440,.45]],cool:[[0,587,.6]],prep:[[0,523,.3]]};
+function buildTrack(g){
+  const SR=8000,total=sum(g),N=Math.ceil((total+2)*SR);
+  const buf=new ArrayBuffer(44+N*2),dv=new DataView(buf);
+  const w=(o,s)=>{for(let i=0;i<s.length;i++)dv.setUint8(o+i,s.charCodeAt(i))};
+  w(0,'RIFF');dv.setUint32(4,36+N*2,true);w(8,'WAVE');w(12,'fmt ');dv.setUint32(16,16,true);dv.setUint16(20,1,true);dv.setUint16(22,1,true);
+  dv.setUint32(24,SR,true);dv.setUint32(28,SR*2,true);dv.setUint16(32,2,true);dv.setUint16(34,16,true);w(36,'data');dv.setUint32(40,N*2,true);
+  const pcm=new Int16Array(buf,44,N);
+  const tbl=new Int16Array(50);for(let i=0;i<50;i++)tbl[i]=Math.round(40*Math.sin(2*Math.PI*i/50));
+  for(let i=0;i<N;i++)pcm[i]=tbl[i%50];
+  const tone=(t,f,d,a)=>{a=a||12000;const s0=Math.floor(t*SR),n=Math.floor(d*SR),fd=Math.floor(.006*SR);
+    for(let i=0;i<n&&s0+i<N;i++){if(s0+i<0)continue;let e=1;if(i<fd)e=i/fd;else if(i>n-fd)e=(n-i)/fd;pcm[s0+i]=Math.round(a*e*Math.sin(2*Math.PI*f*i/SR))}};
+  let st=0;
+  g.forEach((x,i)=>{
+    if(i>0&&S.beep){tone(st-3,880,.1,9000);tone(st-2,880,.1,9000);tone(st-1,880,.1,9000)}
+    (CUE[x.t]||CUE.rest).forEach(([o,f,d])=>tone(st+o+(i===0?.3:0),f,d));
+    st+=x.s;
+  });
+  if(S.beep){tone(st-3,880,.1,9000);tone(st-2,880,.1,9000);tone(st-1,880,.1,9000)}
+  tone(st,784,.2);tone(st+.25,988,.2);tone(st+.5,1175,.5);
+  return URL.createObjectURL(new Blob([buf],{type:'audio/wav'}));
+}
+
+/* ---------- 計時 ---------- */
+let R=null;
+const C=2*Math.PI*52;
+function start(){
+  const g=segs();if(!g.length)return;
+  try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();AC.resume&&AC.resume()}catch(e){}
+  try{speechSynthesis.cancel();speechSynthesis.speak(new SpeechSynthesisUtterance(''))}catch(e){}
+  const starts=[];let acc=0;g.forEach(x=>{starts.push(acc);acc+=x.s});
+  R={g,starts,total:acc,idx:-1,mode:S.adv==='auto'?'audio':'clock',paused:false,waiting:false,cues:{},segStart:0,pausedAt:0};
+  if(R.mode==='audio'){
+    try{R.url=buildTrack(g);R.audio=new Audio(R.url);
+      R.audio.addEventListener('ended',()=>finish(true));
+      R.audio.addEventListener('timeupdate',tick);
+      R.audio.addEventListener('pause',()=>{if(R&&!R.done&&!R.paused&&!R.audio.ended&&R.mode==='audio'){const t=R.audio.currentTime;R.mode='clock';R.clockBase=Date.now()-t*1000}});
+      const p=R.audio.play();if(p&&p.catch)p.catch(()=>{R.mode='clock';R.clockBase=Date.now()});
+    }catch(e){R.mode='clock'}
+  }
+  if(R.mode==='clock'&&S.adv==='auto')R.clockBase=Date.now();
+  $('rTitle').textContent=S.custom?'自訂 Tabata':({classic:'經典 Tabata',adidas:'adidas 15 分鐘',easy:'入門版',custom:'自訂 Tabata'})[S.preset];
+  $('rBar').style.strokeDasharray=C;
+  $('rStrip').innerHTML=g.filter(x=>x.t==='work').map(()=>'<i></i>').join('');
+  $('runner').classList.add('on');$('runner').classList.remove('paused');$('bPause').textContent='暫停';document.body.style.overflow='hidden';
+  keepAwake();
+  if(S.adv==='auto'){R.timer=setInterval(tick,200);tick()}
+  else{enter(0);R.segStart=Date.now();R.timer=setInterval(tick,200)}
+}
+/* 自動模式的目前位置（秒） */
+function autoPos(){if(R.mode==='audio'&&R.audio)return R.audio.currentTime;return ((R.paused?R.pausedAt:Date.now())-R.clockBase)/1000}
+function idxAt(p){let i=0;while(i+1<R.starts.length&&R.starts[i+1]<=p)i++;return i}
+function enter(i){
+  R.idx=i;R.cues={};const x=R.g[i];
+  const rn=$('runner');rn.style.background='var(--'+x.t+')';
+  try{document.querySelector('meta[name=theme-color]').setAttribute('content',colorOf(x.t))}catch(e){}
+  $('rPhase').textContent=PH[x.t].zh;
+  $('rEx').textContent=x.t==='work'?(x.name||''):(x.t==='rest'||x.t==='setrest'?nextWorkName(i):'');
+  const works=R.g.map((y,j)=>y.t==='work'?j:-1).filter(j=>j>=0);
+  const wi=works.filter(j=>j<i).length+(x.t==='work'?1:0);
+  $('rCount').textContent=x.t==='work'||x.t==='rest'?('第 '+(x.round||'')+'／'+S.rounds+' 回合'+(S.sets>1?'，第 '+x.set+'／'+S.sets+' 組':'')):(x.t==='setrest'?'第 '+x.set+' 組完成':'');
+  [...$('rStrip').children].forEach((el,k)=>{el.className=k<wi-(x.t==='work'?1:0)?'done':(k===wi-1&&x.t==='work'?'now':'')});
+  const n=R.g[i+1];
+  $('rNext').innerHTML=n?('<span>接著　'+PH[n.t].zh+(n.t==='work'&&n.name?'：'+esc(n.name):'')+'</span><span class="num">'+mmss(n.s)+'</span>'):'<span>最後一段</span><span></span>';
+  const zh=PH[x.t].zh+(x.t==='work'&&x.name?'，'+x.name:'')+'，'+durZh(x.s);
+  const en=PH[x.t].en+(x.t==='work'&&x.name?', '+x.name:'')+', '+durEn(x.s);
+  say(zh,en);
+  vib(x.t==='work'?[250,100,250]:[300]);
+  if(R.mode!=='audio')beep(x.t==='work'?1046:620,280);
+}
+function nextWorkName(i){for(let j=i+1;j<R.g.length;j++)if(R.g[j].t==='work')return R.g[j].name?'下一個：'+R.g[j].name:'';return ''}
+function show(rem,x){
+  $('rTime').textContent=rem>=60?mmss(rem):Math.max(0,Math.ceil(rem));
+  $('rBar').style.strokeDashoffset=(C*(1-Math.max(0,Math.min(1,rem/x.s)))).toFixed(2);
+  const left=R.total-(R.starts[R.idx]+x.s-rem);$('rLeft').textContent='剩 '+mmss(left);
+}
+function tick(){
+  if(!R||R.done)return;
+  if(S.adv==='auto'){
+    const p=autoPos();if(p>=R.total){finish(true);return}
+    const i=idxAt(p);if(i!==R.idx)enter(i);
+    if(R.paused)return;
+    const x=R.g[R.idx],rem=R.starts[R.idx]+x.s-p;show(rem,x);cueTail(rem,x);
+    return;
+  }
+  if(R.paused||R.waiting)return;
+  const x=R.g[R.idx],rem=x.s-(Date.now()-R.segStart)/1000;
+  show(rem,x);cueTail(rem,x);
+  if(rem<=0)segDone();
+}
+function cueTail(rem,x){
+  const c=R.cues,sec=Math.ceil(rem);
+  if(x.t==='work'&&x.s>=20&&rem<=x.s/2&&!c.half){c.half=1;say('一半了','Halfway')}
+  if(R.mode!=='audio'&&sec<=3&&sec>=1&&!c['b'+sec]){c['b'+sec]=1;beep(880,110)}
+}
+/* 手動模式：這一段結束 */
+function segDone(){
+  const i=R.idx,next=R.g[i+1];
+  if(!next){finish(true);return}
+  const needWait=S.adv==='each'||(S.adv==='set'&&(next.t==='setrest'||R.g[i].t==='setrest'||next.t==='cool'));
+  if(needWait){
+    R.waiting=true;beep(660,200);vib([200]);
+    $('waitTxt').textContent='下一段：'+PH[next.t].zh+(next.t==='work'&&next.name?'：'+next.name:'')+'，'+durZh(next.s);
+    $('bWait').textContent='開始下一段';$('wait').classList.add('on');
+    say('準備好就按開始','Tap start when ready');
+    $('rTime').textContent='0';
+  }else go(i+1);
+}
+function go(i){R.waiting=false;$('wait').classList.remove('on');enter(i);R.segStart=Date.now();tick()}
+$('bWait').onclick=()=>{if(!R)return;go(R.idx+1)};
+$('bPause').onclick=()=>{
+  if(!R||R.done||R.waiting)return;
+  if(!R.paused){R.paused=true;R.pausedAt=Date.now();if(R.mode==='audio'&&R.audio){try{R.audio.pause()}catch(e){}}
+    $('bPause').textContent='繼續';$('runner').classList.add('paused');release();say('暫停','Paused')}
+  else{const d=Date.now()-R.pausedAt;R.paused=false;
+    if(S.adv==='auto'){if(R.mode==='audio'&&R.audio){try{R.audio.play()}catch(e){}}else R.clockBase+=d}else R.segStart+=d;
+    $('bPause').textContent='暫停';$('runner').classList.remove('paused');keepAwake();tick()}
+};
+$('bSkip').onclick=()=>{
+  if(!R||R.done)return;
+  if(S.adv==='auto'){const nxt=R.idx+1;if(nxt>=R.g.length){finish(true);return}
+    if(R.mode==='audio'&&R.audio){try{R.audio.currentTime=R.starts[nxt]}catch(e){}}else R.clockBase-= (R.starts[nxt]-autoPos())*1000;
+    tick();return}
+  if(R.waiting){go(R.idx+1);return}
+  if(R.idx+1>=R.g.length){finish(true);return}
+  go(R.idx+1);
+};
+let stopArm=0;
+$('bStop').onclick=()=>{if(!R)return;if(Date.now()-stopArm<3000){finish(false);return}stopArm=Date.now();$('bStop').textContent='再按一次';setTimeout(()=>{$('bStop').textContent='結束'},3000)};
+function finish(done){
+  if(!R||R.done)return;R.done=true;clearInterval(R.timer);release();
+  try{R.audio&&R.audio.pause()}catch(e){}
+  try{R.url&&URL.revokeObjectURL(R.url)}catch(e){}
+  if(done){say('完成了，記得緩和和伸展','Done. Cool down and stretch.');vib([300,150,300,150,500]);if(R.mode!=='audio'){beep(784,200);setTimeout(()=>beep(1046,350),220)}}
+  $('runner').classList.remove('on');$('wait').classList.remove('on');document.body.style.overflow='';$('bStop').textContent='結束';
+  try{document.querySelector('meta[name=theme-color]').setAttribute('content','#1C2B27')}catch(e){}
+  if(done)toast('完成 '+R.g.filter(x=>x.t==='work').length+' 個運動段');
+  R=null;
+}
+$('btnGo').onclick=start;
+
+renderAll();
+})();
+</script>
+</body>
+</html>
