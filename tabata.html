@@ -134,7 +134,8 @@ details.edit[open] summary::after{content:"收合"}
 </head>
 <body>
 <div class="wrap">
-  <div class="top"><h1>Tabata 時間指導器</h1><a href="./">回間歇快走慢跑</a></div>
+  <div class="top"><h1>Tabata 時間指導器</h1></div>
+  <div class="seg" role="group" aria-label="運動模式" style="margin-bottom:14px"><button id="toWalk" aria-pressed="false">間歇快走慢跑</button><button class="on" aria-pressed="true">Tabata</button></div>
 
   <div class="presets" id="presets">
     <button data-p="classic"><b>經典 Tabata</b><span>20 秒／10 秒 × 8，約 4 分鐘</span></button>
@@ -466,6 +467,8 @@ function finish(done){
   R=null;
 }
 $('btnGo').onclick=start;
+try{localStorage.setItem('iw_mode','tabata')}catch(e){}
+$('toWalk').onclick=()=>{try{localStorage.setItem('iw_mode','walk')}catch(e){}location.href='./#today'};
 
 renderAll();
 })();

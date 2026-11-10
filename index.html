@@ -7,6 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="間歇快走慢跑">
 <title>公園間歇快走慢跑教練</title>
+<script>try{if(localStorage.getItem("iw_mode")==="tabata"&&!location.hash)location.replace("tabata.html")}catch(e){}</script>
 <meta name="description" content="依間歇訓練理論設計的公園快走慢跑教練：每日課表、背景計時、手環震動提醒和運動紀錄。">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
@@ -33,6 +34,9 @@ html,body{overflow-x:clip;background:var(--bg);color:var(--ink);font-family:var(
 body{padding:env(safe-area-inset-top) env(safe-area-inset-right) calc(72px + env(safe-area-inset-bottom)) env(safe-area-inset-left)}
 button,select,input,textarea{font-family:inherit;color:inherit}
 button{cursor:pointer}
+.modeseg{display:flex;gap:4px;padding:4px;margin:0 0 12px;border-radius:12px;background:var(--soft)}
+.modeseg button{flex:1;border:0;background:transparent;border-radius:9px;padding:8px 4px;font-size:14px;color:var(--sub)}
+.modeseg button.on{background:var(--surface);color:var(--ink);font-weight:600;box-shadow:inset 0 0 0 1.5px var(--ink)}
 button:active{transform:scale(.97)}
 button:disabled,.btn:disabled{opacity:.45;cursor:not-allowed}
 h1,h2,.page-title{text-wrap:balance;overflow-wrap:break-word;min-width:0}
@@ -246,7 +250,7 @@ nav button.on svg{background:var(--soft)}
     <div class="sec">
       <div class="sec-h">想練別的？</div>
       <div class="picks" id="pickWorkout"></div>
-      <a class="btn small ghost" href="tabata.html" style="display:inline-block;margin-top:8px;text-decoration:none">Tabata 時間指導器</a>
+      <a class="btn small ghost" href="tabata.html" id="toTabata2" style="display:inline-block;margin-top:8px;text-decoration:none">改做 Tabata</a>
     </div>
     <div id="suggestBox"></div>
   </section>
@@ -326,6 +330,12 @@ nav button.on svg{background:var(--soft)}
   <!-- 設定 -->
   <section class="view" id="v-set">
     <div class="page-title">設定</div>
+
+    <div class="group-t">運動模式</div>
+    <div class="group">
+      <div class="item"><div class="l"><b>要做哪一種運動</b><span>選了會記住，下次打開 App 直接進入</span></div></div>
+      <div class="modeseg" role="group" aria-label="運動模式"><button class="on" aria-pressed="true">間歇快走慢跑</button><button id="toTabata" aria-pressed="false">Tabata</button></div>
+    </div>
 
     <div class="group-t">我的課表</div>
     <div class="group">
@@ -947,6 +957,8 @@ function renderMethod(){
   $('mIntensity').innerHTML=['rec','walk','jog','tempo','run'].map(t=>'<div><div class="bar" style="--c:'+T[t].color+'"></div><div class="main"><b>'+(t==='rec'?'暖身／恢復走':T[t].name)+'</b><span>'+T[t].talk+'</span></div><span class="tag">RPE '+T[t].rpe+'</span></div>').join('');
 }
 function renderAll(){renderToday();renderLog();renderMethod()}
+function goTabata(e){if(e)e.preventDefault();try{localStorage.setItem('iw_mode','tabata')}catch(err){}location.href='tabata.html'}
+$('toTabata').onclick=goTabata;$('toTabata2').onclick=goTabata;
 
 syncSettings();renderAll();show(location.hash.slice(1));
 })();
