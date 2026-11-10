@@ -36,6 +36,7 @@ button,select,input,textarea{font-family:inherit;color:inherit}
 button{cursor:pointer}
 .modeseg{display:flex;gap:4px;padding:4px;margin:0 0 12px;border-radius:12px;background:var(--soft)}
 .modeseg button{flex:1;border:0;background:transparent;border-radius:9px;padding:8px 4px;font-size:14px;color:var(--sub)}
+.modebar{margin:4px 0 8px}
 .modeseg button.on{background:var(--surface);color:var(--ink);font-weight:600;box-shadow:inset 0 0 0 1.5px var(--ink)}
 button:active{transform:scale(.97)}
 button:disabled,.btn:disabled{opacity:.45;cursor:not-allowed}
@@ -223,6 +224,7 @@ nav button.on svg{background:var(--soft)}
 <div class="wrap">
   <!-- 今天 -->
   <section class="view on" id="v-today">
+    <div class="modeseg modebar" role="group" aria-label="運動模式"><button class="on" aria-pressed="true">間歇快走慢跑</button><button id="toTabata3" aria-pressed="false">Tabata</button></div>
     <div class="top">
       <div class="hello"><span id="hello">早安</span><small id="todayDate"></small></div>
       <button class="lv" id="levelTag" aria-label="目前等級，點一下到設定調整"><b id="lvNum">1</b><span>等級</span></button>
@@ -250,7 +252,6 @@ nav button.on svg{background:var(--soft)}
     <div class="sec">
       <div class="sec-h">想練別的？</div>
       <div class="picks" id="pickWorkout"></div>
-      <a class="btn small ghost" href="tabata.html" id="toTabata2" style="display:inline-block;margin-top:8px;text-decoration:none">改做 Tabata</a>
     </div>
     <div id="suggestBox"></div>
   </section>
@@ -958,7 +959,7 @@ function renderMethod(){
 }
 function renderAll(){renderToday();renderLog();renderMethod()}
 function goTabata(e){if(e)e.preventDefault();try{localStorage.setItem('iw_mode','tabata')}catch(err){}location.href='tabata.html'}
-$('toTabata').onclick=goTabata;$('toTabata2').onclick=goTabata;
+$('toTabata').onclick=goTabata;$('toTabata3').onclick=goTabata;
 
 syncSettings();renderAll();show(location.hash.slice(1));
 })();

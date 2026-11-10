@@ -36,25 +36,49 @@ button:disabled{cursor:not-allowed;color:var(--sub);background:var(--soft)}
 :where(button,a,input,select,summary):focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 .num{font-family:var(--num);font-variant-numeric:tabular-nums}
 .wrap{max-width:480px;margin:0 auto;padding:12px 16px}
-.top{display:flex;justify-content:space-between;align-items:center;padding:4px 0 12px}
-.top h1{font-size:20px;font-weight:700;text-wrap:balance}
-.top a{font-size:13px;color:var(--sub);text-decoration:none}
 .sub{color:var(--sub);font-size:13px}
-h2{font-size:14px;font-weight:700;margin:20px 0 8px}
 
 /* presets */
-.presets{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-.presets button{text-align:left;border:0;border-radius:14px;padding:12px;background:var(--surface);box-shadow:inset 0 0 0 1px var(--line)}
-.presets button b{display:block;font-size:14px;white-space:nowrap}
-.presets button span{display:block;font-size:12px;color:var(--sub);margin-top:4px}
-.presets button.on{box-shadow:inset 0 0 0 2px var(--ink)}
 
 /* summary bar of the plan */
-.plan{background:var(--surface);border-radius:16px;padding:16px;margin-top:12px;box-shadow:inset 0 0 0 1px var(--line)}
-.strip{display:flex;height:28px;border-radius:8px;overflow:hidden;gap:1px;background:var(--line)}
-.strip i{display:block;height:100%}
-.facts{display:flex;justify-content:space-between;margin-top:8px;font-size:12px;color:var(--sub)}
-.facts b{display:block;font-family:var(--num);font-size:22px;font-weight:600;color:var(--ink);line-height:1.1}
+
+
+/* home: one hero, one action */
+.modebar{display:flex;gap:4px;padding:4px;border-radius:14px;background:var(--soft);margin:4px 0 16px}
+.modebar button{flex:1;border:0;background:transparent;border-radius:10px;padding:8px 4px;font-size:14px;color:var(--sub)}
+.modebar button.on{background:var(--surface);color:var(--ink);font-weight:600;box-shadow:inset 0 0 0 1.5px var(--ink)}
+.head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.head h1{font-size:24px;font-weight:700;text-wrap:balance}
+.head-act{display:flex;gap:8px}
+.iconbtn{width:44px;height:44px;border-radius:14px;border:0;background:var(--surface);box-shadow:inset 0 0 0 1px var(--line);display:flex;align-items:center;justify-content:center}
+.iconbtn svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.presets{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;padding:4px;border-radius:14px;background:var(--soft)}
+.presets button{border:0;background:transparent;border-radius:10px;padding:8px 0;font-size:14px;color:var(--sub)}
+.presets button.on{background:var(--surface);color:var(--ink);font-weight:600;box-shadow:inset 0 0 0 1.5px var(--ink)}
+.hero{margin-top:16px;border-radius:24px;padding:20px 20px 16px;background:var(--work);color:var(--on-phase)}
+.hero-name{font-size:14px;opacity:.9}
+.hero-time{font-size:72px;font-weight:600;line-height:1;margin:4px 0}
+.hero-sub{font-size:15px}
+.strip{display:flex;height:24px;border-radius:8px;overflow:hidden;gap:2px;margin-top:16px}
+.strip i{display:block;height:100%;border-radius:2px}
+.strip i.w{background:var(--on-phase)}
+.strip i.r{background:var(--veil-strong)}
+.strip i.o{background:var(--veil)}
+.hero-tags{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.hero-tags span{font-size:12px;padding:4px 12px;border-radius:99px;background:var(--veil)}
+.go{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;height:56px;margin-top:16px;border:0;border-radius:28px;background:var(--ink);color:var(--bg);font-size:17px;font-weight:700}
+.go svg{width:18px;height:18px;fill:currentColor}
+.hint{text-align:center;font-size:12px;color:var(--sub);margin-top:8px}
+
+/* settings and info: sheets that only open when asked */
+.sheet{position:fixed;inset:0;z-index:15;background:var(--bg);display:flex;flex-direction:column;transform:translateY(0);transition:transform .2s ease}
+.sheet[hidden]{display:none}
+.sheet-head{display:flex;justify-content:space-between;align-items:center;padding:calc(12px + env(safe-area-inset-top)) 16px 8px;max-width:480px;width:100%;margin:0 auto}
+.sheet-head h2{font-size:20px;font-weight:700;text-wrap:balance}
+.done{border:0;border-radius:12px;padding:8px 16px;font-size:14px;font-weight:600;background:var(--ink);color:var(--bg)}
+.sheet-body{flex:1;overflow:auto;padding:0 16px calc(24px + env(safe-area-inset-bottom));max-width:480px;width:100%;margin:0 auto}
+.sheet-body h3{font-size:13px;font-weight:600;color:var(--sub);margin:16px 4px 8px}
+.notes p{font-size:14px;margin:0 4px 8px}
 
 /* settings rows */
 .group{background:var(--surface);border-radius:16px;padding:4px 16px;box-shadow:inset 0 0 0 1px var(--line)}
@@ -92,11 +116,6 @@ details.edit[open] summary::after{content:"收合"}
 .edited{font-size:12px;color:var(--work);margin:4px 0 8px}
 .btn{border:0;border-radius:12px;padding:8px 16px;font-size:14px;font-weight:600;background:var(--ink);color:var(--bg)}
 .btn.ghost{background:transparent;color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
-.go{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;height:54px;margin-top:16px;border:0;border-radius:27px;background:var(--work);color:var(--on-phase);font-size:17px;font-weight:700}
-.go svg{width:18px;height:18px;fill:currentColor}
-.notes{margin-top:20px;font-size:13px;color:var(--sub)}
-.notes p{margin:8px 0}
-.notes b{color:var(--ink)}
 
 /* runner */
 #runner{position:fixed;inset:0;z-index:20;display:none;flex-direction:column;background:var(--prep);color:var(--on-phase);transition:background .35s;padding:calc(12px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom))}
@@ -134,58 +153,84 @@ details.edit[open] summary::after{content:"收合"}
 </head>
 <body>
 <div class="wrap">
-  <div class="top"><h1>Tabata 時間指導器</h1></div>
-  <div class="seg" role="group" aria-label="運動模式" style="margin-bottom:14px"><button id="toWalk" aria-pressed="false">間歇快走慢跑</button><button class="on" aria-pressed="true">Tabata</button></div>
+  <div class="modebar" role="group" aria-label="運動模式"><button id="toWalk" aria-pressed="false">間歇快走慢跑</button><button class="on" aria-pressed="true">Tabata</button></div>
 
-  <div class="presets" id="presets">
-    <button data-p="classic"><b>經典 Tabata</b><span>20 秒／10 秒 × 8，約 4 分鐘</span></button>
-    <button data-p="adidas"><b>adidas 15 分鐘</b><span>兩個動作交替，3 組，組間 1 分鐘</span></button>
-    <button data-p="easy"><b>入門版</b><span>20 秒／20 秒 × 8，強度較低</span></button>
-    <button data-p="custom"><b>自訂</b><span id="customSum">每一段長度自己決定</span></button>
+  <div class="head">
+    <h1>Tabata</h1>
+    <div class="head-act">
+      <button class="iconbtn" id="openInfo" aria-label="Tabata 說明"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5h.01"/></svg></button>
+      <button class="iconbtn" id="openSet" aria-label="設定"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg></button>
+    </div>
   </div>
 
-  <div class="plan">
+  <div class="presets" id="presets" role="group" aria-label="模式">
+    <button data-p="classic">經典</button>
+    <button data-p="adidas">adidas</button>
+    <button data-p="easy">入門</button>
+    <button data-p="custom">自訂</button>
+  </div>
+
+  <div class="hero" id="hero">
+    <div class="hero-name" id="heroName"></div>
+    <div class="hero-time num" id="heroTime"></div>
+    <div class="hero-sub" id="heroSub"></div>
     <div class="strip" id="strip" aria-hidden="true"></div>
-    <div class="facts" id="facts"></div>
-  </div>
-
-  <h2>時間設定</h2>
-  <div class="group" id="times"></div>
-
-  <h2>動作（運動段依序輪流）</h2>
-  <div class="group">
-    <div class="item block-row"><div class="l"><b>動作名稱</b><span>用逗號分開，例如：開合跳，深蹲。留空就只顯示「運動」</span></div>
-      <input type="text" id="exList" style="margin-top:8px" placeholder="開合跳，深蹲"></div>
-  </div>
-
-  <h2>下一段怎麼開始</h2>
-  <div class="group">
-    <div class="item block-row"><div class="l"><b>開始方式</b><span id="advHint"></span></div>
-      <div class="seg" id="advSeg"><button data-v="auto">自動接續</button><button data-v="set">每組結束等我</button><button data-v="each">每段都等我</button></div></div>
-  </div>
-
-  <details class="edit" id="editBox"><summary>逐段調整長度</summary>
-    <p class="sub">每一段都可以單獨改秒數，例如最後一回合多休息一點。改過之後，上面的時間設定變動會重新產生並清掉逐段調整。</p>
-    <div id="editedNote"></div>
-    <div class="seglist" id="segList"></div>
-  </details>
-
-  <h2>提示</h2>
-  <div class="group">
-    <div class="item"><div class="l"><b>語音提示</b><span>每段開始時說出動作</span></div><input type="checkbox" class="tg" id="sVoice"></div>
-    <div class="item"><div class="l"><b>語音語言</b></div><div class="seg" id="langSeg" style="width:150px"><button data-v="zh">中文</button><button data-v="en">English</button></div></div>
-    <div class="item"><div class="l"><b>嗶聲倒數</b><span>每段最後 3 秒</span></div><input type="checkbox" class="tg" id="sBeep"></div>
-    <div class="item"><div class="l"><b>震動</b><span>Android，螢幕亮著時</span></div><input type="checkbox" class="tg" id="sVib"></div>
-    <div class="item block-row"><div class="l"><b>外觀</b></div>
-      <div class="seg" id="themeSeg"><button data-v="auto">跟隨手機</button><button data-v="light">淺色</button><button data-v="dark">深色</button></div></div>
+    <div class="hero-tags" id="heroTags"></div>
   </div>
 
   <button class="go" id="btnGo"></button>
+  <p class="hint" id="homeHint"></p>
+</div>
 
-  <div class="notes">
-    <p><b>Tabata 是什麼</b>　1996 年田畑泉教授以日本競速滑冰選手做的研究：全力運動 20 秒、休息 10 秒，共 8 回合，4 分鐘就同時提升有氧與無氧能力。原始研究用的是飛輪，現在多用徒手動作。</p>
-    <p><b>adidas 的做法</b>　每組選兩個動作交替（例如波比跳和側弓步），做 3 組、組間休息約 1 分鐘，全長約 15 分鐘。強度至少達最大心率的 75%（220 − 年齡 × 0.75）；還能輕鬆聊天就是不夠用力。</p>
-    <p><b>安全</b>　先暖身 5 分鐘，結束後緩和 3～10 分鐘。選自己做得標準的動作。剛開始可以先用入門版，每週 1～4 次，中間隔一天。有心血管疾病或高血壓請先問醫師。</p>
+<!-- settings sheet: only shown when asked -->
+<div class="sheet" id="setSheet" role="dialog" aria-modal="true" aria-labelledby="setTitle" hidden>
+  <div class="sheet-head"><h2 id="setTitle">設定</h2><button class="done" id="closeSet">完成</button></div>
+  <div class="sheet-body">
+    <h3>時間</h3>
+    <div class="group" id="times"></div>
+
+    <h3>動作</h3>
+    <div class="group">
+      <div class="item block-row"><div class="l"><b>動作名稱</b><span>用逗號分開，運動段會依序輪流。留空就只顯示「運動」</span></div>
+        <input type="text" id="exList" placeholder="開合跳，深蹲"></div>
+    </div>
+
+    <h3>下一段怎麼開始</h3>
+    <div class="group">
+      <div class="item block-row"><div class="l"><span id="advHint"></span></div>
+        <div class="seg" id="advSeg"><button data-v="auto">自動接續</button><button data-v="set">每組結束等我</button><button data-v="each">每段都等我</button></div></div>
+    </div>
+
+    <details class="edit" id="editBox"><summary>逐段調整長度</summary>
+      <p class="sub">單獨改任何一段的秒數，例如最後一回合多休息一點。改了上面的時間，會重新產生並清掉逐段調整。</p>
+      <div id="editedNote"></div>
+      <div class="seglist" id="segList"></div>
+    </details>
+
+    <h3>提示與外觀</h3>
+    <div class="group">
+      <div class="item"><div class="l"><b>語音提示</b><span>每段開始時說出動作</span></div><input type="checkbox" class="tg" id="sVoice"></div>
+      <div class="item"><div class="l"><b>語音語言</b></div><div class="seg" id="langSeg" style="width:150px"><button data-v="zh">中文</button><button data-v="en">English</button></div></div>
+      <div class="item"><div class="l"><b>嗶聲倒數</b><span>每段最後 3 秒</span></div><input type="checkbox" class="tg" id="sBeep"></div>
+      <div class="item"><div class="l"><b>震動</b><span>Android，螢幕亮著時</span></div><input type="checkbox" class="tg" id="sVib"></div>
+      <div class="item block-row"><div class="l"><b>外觀</b></div>
+        <div class="seg" id="themeSeg"><button data-v="auto">跟隨手機</button><button data-v="light">淺色</button><button data-v="dark">深色</button></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- info sheet -->
+<div class="sheet" id="infoSheet" role="dialog" aria-modal="true" aria-labelledby="infoTitle" hidden>
+  <div class="sheet-head"><h2 id="infoTitle">關於 Tabata</h2><button class="done" id="closeInfo">關閉</button></div>
+  <div class="sheet-body notes">
+    <h3>是什麼</h3>
+    <p>1996 年田畑泉教授以日本競速滑冰選手做的研究：全力運動 20 秒、休息 10 秒，共 8 回合，4 分鐘就同時提升有氧與無氧能力。原始研究用的是飛輪，現在多用徒手動作。</p>
+    <h3>adidas 的做法</h3>
+    <p>每組選兩個動作交替（例如波比跳和側弓步），做 3 組、組間休息約 1 分鐘，全長約 14 到 15 分鐘。強度至少達最大心率的 75%；還能輕鬆聊天，就是不夠用力。</p>
+    <h3>三種預設</h3>
+    <p>經典：20 秒／10 秒 × 8，約 4 分鐘。adidas：兩個動作交替，3 組，組間 1 分鐘。入門：20 秒／20 秒 × 8，強度較低，適合剛開始。</p>
+    <h3>安全</h3>
+    <p>先暖身 5 分鐘，結束後緩和 3 到 10 分鐘。選自己做得標準的動作。每週 1 到 4 次，中間隔一天。有心血管疾病或高血壓請先問醫師。</p>
   </div>
 </div>
 
@@ -259,8 +304,7 @@ function durEn(s){const m=Math.floor(s/60),r=s%60;return [m?m+(m>1?' minutes':' 
 function toast(t){const e=$('toast');e.textContent=t;e.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('on'),2000)}
 
 /* ---------- 畫面 ---------- */
-function renderPresets(){[...$('presets').children].forEach(b=>b.classList.toggle('on',b.dataset.p===S.preset));
-  const c=S.saved;$('customSum').textContent=c?('上次：'+c.work+' 秒／'+c.rest+' 秒 × '+c.rounds+(c.sets>1?'，'+c.sets+' 組':'')+(c.custom?'，含逐段調整':'')):'每一段長度自己決定'}
+function renderPresets(){[...$('presets').children].forEach(b=>{const on=b.dataset.p===S.preset;b.classList.toggle('on',on);b.setAttribute('aria-pressed',on)})}
 function renderTimes(){
   $('times').innerHTML=FIELDS.map(([k,label,hint,u,min,max,step,ph])=>
     '<div class="item"><div class="l"><b>'+(ph?'<span class="dot" style="background:var(--'+ph+')"></span>':'')+label+'</b><span>'+hint+'</span></div>'+
@@ -268,10 +312,15 @@ function renderTimes(){
 }
 function renderPlan(){
   const g=segs(),tot=sum(g);
-  $('strip').innerHTML=g.map(x=>'<i style="flex:'+x.s+';background:var(--'+x.t+')"></i>').join('');
-  const works=g.filter(x=>x.t==='work'),workS=sum(works);
-  $('facts').innerHTML='<div><b>'+mmss(tot)+'</b>全長</div><div><b>'+works.length+'</b>運動段</div><div><b>'+mmss(workS)+'</b>運動時間</div><div><b>'+(S.custom?'自訂':S.sets)+'</b>'+(S.custom?'逐段':'組')+'</div>';
-  $('btnGo').innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></svg>開始 <span class="num">'+mmss(tot)+'</span>';
+  $('strip').innerHTML=g.map(x=>'<i class="'+(x.t==='work'?'w':(x.t==='rest'?'r':'o'))+'" style="flex:'+x.s+'"></i>').join('');
+  const works=g.filter(x=>x.t==='work');
+  $('heroName').textContent=({classic:'經典 Tabata',adidas:'adidas 15 分鐘',easy:'入門版',custom:'自訂'})[S.preset]||'自訂';
+  $('heroTime').textContent=mmss(tot);
+  $('heroSub').textContent=S.work+' 秒運動，'+S.rest+' 秒休息，'+S.rounds+' 回合'+(S.sets>1?'，'+S.sets+' 組':'');
+  const ex=exercises();
+  $('heroTags').innerHTML=['<span>'+({auto:'自動接續',set:'每組結束等我',each:'每段都等我'})[S.adv]+'</span>','<span>運動 '+works.length+' 段</span>'].concat(ex.length?['<span>'+esc(ex.join('、'))+'</span>']:[]).concat(S.custom?['<span>含逐段調整</span>']:[]).join('');
+  $('homeHint').textContent=S.preset==='custom'&&S.saved?'自訂時間已記住，下次直接開始':'按右上角的設定可以調整時間和動作';
+  $('btnGo').innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></svg>開始';
   renderSegList(g);
 }
 function segLabel(x){
@@ -313,7 +362,7 @@ $('exList').onchange=e=>{S.ex=e.target.value.trim();S.custom=null;if(S.preset!==
 $('segList').addEventListener('click',e=>{const b=e.target.closest('button[data-d]');if(!b)return;const i=+b.parentNode.dataset.i;editSeg(i,segs()[i].s+(+b.dataset.d))});
 $('segList').addEventListener('change',e=>{const st=e.target.closest('.step');if(!st)return;editSeg(+st.dataset.i,parseInt(e.target.value,10))});
 function editSeg(i,v){const g=segs().map(x=>Object.assign({},x));g[i].s=clampNum(v,1,900);S.custom=g;S.preset='custom';save();renderPresets();renderPlan()}
-$('advSeg').onclick=e=>{const b=e.target.closest('button');if(!b)return;S.adv=b.dataset.v;save();renderAdv()};
+$('advSeg').onclick=e=>{const b=e.target.closest('button');if(!b)return;S.adv=b.dataset.v;save();renderAdv();renderPlan()};
 $('langSeg').onclick=e=>{const b=e.target.closest('button');if(!b)return;S.lang=b.dataset.v;save();renderSeg('langSeg',S.lang)};
 ['Voice','Beep','Vib'].forEach(k=>$('s'+k).onchange=e=>{S[k.toLowerCase()]=e.target.checked;save()});
 function themeMode(){try{const v=localStorage.getItem('tabata_theme');return v==='light'||v==='dark'?v:'auto'}catch(e){return 'auto'}}
@@ -476,6 +525,11 @@ function finish(done){
   R=null;
 }
 $('btnGo').onclick=start;
+function openSheet(id){const el=$(id);el.hidden=false;document.body.style.overflow='hidden';const f=el.querySelector('.done');f&&f.focus()}
+function closeSheet(id){$(id).hidden=true;document.body.style.overflow='';renderPlan()}
+$('openSet').onclick=()=>openSheet('setSheet');$('closeSet').onclick=()=>closeSheet('setSheet');
+$('openInfo').onclick=()=>openSheet('infoSheet');$('closeInfo').onclick=()=>closeSheet('infoSheet');
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){['setSheet','infoSheet'].forEach(id=>{if(!$(id).hidden)closeSheet(id)})}});
 try{localStorage.setItem('iw_mode','tabata')}catch(e){}
 $('toWalk').onclick=()=>{try{localStorage.setItem('iw_mode','walk')}catch(e){}location.href='./#today'};
 
