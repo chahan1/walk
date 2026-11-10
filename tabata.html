@@ -212,7 +212,8 @@ details.edit[open] summary::after{content:"收合"}
       <div class="item"><div class="l"><b>語音提示</b><span>每段開始時說出動作</span></div><input type="checkbox" class="tg" id="sVoice"></div>
       <div class="item"><div class="l"><b>語音語言</b></div><div class="seg" id="langSeg" style="width:150px"><button data-v="zh">中文</button><button data-v="en">English</button></div></div>
       <div class="item"><div class="l"><b>嗶聲倒數</b><span>每段最後 3 秒</span></div><input type="checkbox" class="tg" id="sBeep"></div>
-      <div class="item"><div class="l"><b>換段震動</b><span>運動開始震三下、休息開始震一長聲，最後 3 秒短震倒數（Android）</span></div><input type="checkbox" class="tg" id="sVib"></div>
+      <div class="item"><div class="l"><b>換段震動</b><span>每回合運動時間一到就長震兩下；運動開始短震三下；最後 3 秒短震倒數（Android）</span></div><input type="checkbox" class="tg" id="sVib"></div>
+      <div class="item"><div class="l"><b>測試震動</b><span id="vibStatus">按一下，手機應該長震兩下</span></div><button class="btn ghost" id="btnVibTest" style="padding:8px 12px;font-size:13px">測試</button></div>
       <div class="item"><div class="l"><b>鎖螢幕時用通知震動</b><span>螢幕關閉時改發通知，手機和小米手環都會震動</span></div><input type="checkbox" class="tg" id="sNotify"></div>
       <div class="item"><div class="l"><b>通知權限</b><span id="nStatus"></span></div><button class="btn ghost" id="btnPerm" style="padding:8px 12px;font-size:13px">允許通知</button></div>
       <div class="item block-row"><div class="l"><b>外觀</b></div>
@@ -370,8 +371,12 @@ $('langSeg').onclick=e=>{const b=e.target.closest('button');if(!b)return;S.lang=
 /* 通知：螢幕關閉時由系統震動（手機、小米手環） */
 function renderNotify(){const el=$('nStatus');if(!('Notification' in window)){el.textContent='這個瀏覽器不支援通知';return}
   el.textContent={granted:'已允許',denied:'被封鎖，請到手機設定 → 應用程式 → Chrome → 通知開啟',default:'還沒允許'}[Notification.permission]||''}
+$('btnVibTest').onclick=()=>{
+  const ok=('vibrate' in navigator)?navigator.vibrate([800,200,800]):false;
+  $('vibStatus').textContent=!('vibrate' in navigator)?'這個瀏覽器不支援震動（iPhone 的網頁不能震動）':ok?'已送出震動指令。沒感覺的話，請照說明檢查手機的震動設定':'震動被瀏覽器擋下了，請照說明檢查設定';
+};
 $('btnPerm').onclick=async()=>{if(!('Notification' in window))return;try{await Notification.requestPermission()}catch(e){}renderNotify()};
-const VIB={work:[400,120,400,120,400],rest:[700],setrest:[300,150,300],prep:[200],cool:[700],end:[300,150,300,150,600]};
+const VIB={work:[200,100,200,100,200],rest:[800,200,800],setrest:[800,200,800],prep:[200],cool:[800,200,800],end:[300,150,300,150,600]};
 async function notify(title,body,pattern){
   if(S.notify===false||!('Notification' in window)||Notification.permission!=='granted')return;
   const opt={body,tag:'tabata',renotify:true,vibrate:pattern,silent:false,icon:'icon-192.png',badge:'icon-192.png'};
@@ -466,7 +471,7 @@ function enter(i){
   const zh=PH[x.t].zh+(x.t==='work'&&x.name?'，'+x.name:'')+'，'+durZh(x.s);
   const en=PH[x.t].en+(x.t==='work'&&x.name?', '+x.name:'')+', '+durEn(x.s);
   say(zh,en);
-  if(document.visibilityState==='hidden')notify(PH[x.t].zh+(x.t==='work'&&x.name?'：'+x.name:'')+'　'+durZh(x.s),(x.round?'第 '+x.round+'／'+S.rounds+' 回合':'')+(S.sets>1&&x.set?'，第 '+x.set+'／'+S.sets+' 組':''),VIB[x.t]);
+  if(document.visibilityState==='hidden')notify((x.t==='rest'||x.t==='setrest'?'運動時間到，':'')+PH[x.t].zh+(x.t==='work'&&x.name?'：'+x.name:'')+'　'+durZh(x.s),(x.round?'第 '+x.round+'／'+S.rounds+' 回合':'')+(S.sets>1&&x.set?'，第 '+x.set+'／'+S.sets+' 組':''),VIB[x.t]);
   else vib(VIB[x.t]);
   if(R.mode!=='audio')beep(x.t==='work'?1046:620,280);
 }
@@ -492,7 +497,7 @@ function tick(){
 }
 function cueTail(rem,x){
   const c=R.cues,sec=Math.ceil(rem);
-  if(sec<=3&&sec>=1&&!c['v'+sec]&&document.visibilityState==='visible'){c['v'+sec]=1;vib([80])}
+  if(x.t==='work'&&sec<=3&&sec>=1&&!c['v'+sec]&&document.visibilityState==='visible'){c['v'+sec]=1;vib([90])}
   if(x.t==='work'&&x.s>=20&&rem<=x.s/2&&!c.half){c.half=1;say('一半了','Halfway')}
   if(R.mode!=='audio'&&sec<=3&&sec>=1&&!c['b'+sec]){c['b'+sec]=1;beep(880,110)}
 }
