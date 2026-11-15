@@ -153,7 +153,7 @@ details.edit[open] summary::after{content:"收合"}
 </head>
 <body>
 <div class="wrap">
-  <div class="modebar" role="group" aria-label="運動模式"><button id="toWalk" aria-pressed="false">間歇快走慢跑</button><button class="on" aria-pressed="true">Tabata</button></div>
+  <div class="modebar" role="group" aria-label="運動模式"><button id="toWalk" aria-pressed="false">間歇快走</button><button id="toHiit" aria-pressed="false">HIIT</button><button class="on" aria-pressed="true">Tabata</button></div>
 
   <div class="head">
     <h1>Tabata</h1>
@@ -233,7 +233,7 @@ details.edit[open] summary::after{content:"收合"}
     <h3>三種預設</h3>
     <p>經典：20 秒／10 秒 × 8，約 4 分鐘。adidas：兩個動作交替，3 組，組間 1 分鐘。入門：20 秒／20 秒 × 8，強度較低，適合剛開始。</p>
     <h3>安全</h3>
-    <p>先暖身 5 分鐘，結束後緩和 3 到 10 分鐘。選自己做得標準的動作。每週 1 到 4 次，中間隔一天。有心血管疾病或高血壓請先問醫師。</p>
+    <p>先暖身 5 分鐘，結束後緩和 3 到 10 分鐘。選自己做得標準的動作。Tabata 算一次高強度：和 HIIT 合計每週最多 2 次，兩次之間隔 48 小時。有心血管疾病或高血壓請先問醫師。</p>
   </div>
 </div>
 
@@ -322,7 +322,8 @@ function renderPlan(){
   $('heroSub').textContent=S.work+' 秒運動，'+S.rest+' 秒休息，'+S.rounds+' 回合'+(S.sets>1?'，'+S.sets+' 組':'');
   const ex=exercises();
   $('heroTags').innerHTML=['<span>'+({auto:'自動接續',set:'每組結束等我',each:'每段都等我'})[S.adv]+'</span>','<span>運動 '+works.length+' 段</span>'].concat(ex.length?['<span>'+esc(ex.join('、'))+'</span>']:[]).concat(S.custom?['<span>含逐段調整</span>']:[]).join('');
-  $('homeHint').textContent=S.preset==='custom'&&S.saved?'自訂時間已記住，下次直接開始':'按右上角的設定可以調整時間和動作';
+  const hh=hoursSinceHigh();
+  $('homeHint').textContent=hh!=null&&hh<48?'距離上次高強度只有 '+(hh<1?'不到 1':Math.floor(hh))+' 小時，建議至少隔 48 小時，今天做輕鬆的間歇快走':(S.preset==='custom'&&S.saved?'自訂時間已記住，下次直接開始':'按右上角的設定可以調整時間和動作');
   $('btnGo').innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></svg>開始';
   renderSegList(g);
 }
@@ -537,6 +538,7 @@ let stopArm=0;
 $('bStop').onclick=()=>{if(!R)return;if(Date.now()-stopArm<3000){finish(false);return}stopArm=Date.now();$('bStop').textContent='再按一次';setTimeout(()=>{$('bStop').textContent='結束'},3000)};
 function finish(done){
   if(!R||R.done)return;R.done=true;clearInterval(R.timer);release();
+  if(done){try{const log=store.get('hi_log',[]);log.push({ts:Date.now(),kind:'tabata',completed:true});store.set('hi_log',log.slice(-200))}catch(e){}}
   try{R.audio&&R.audio.pause()}catch(e){}
   try{R.url&&URL.revokeObjectURL(R.url)}catch(e){}
   if(done){say('完成了，記得緩和和伸展','Done. Cool down and stretch.');if(document.visibilityState==='hidden')notify('Tabata 完成','記得緩和和伸展',VIB.end);else vib(VIB.end);if(R.mode!=='audio'){beep(784,200);setTimeout(()=>beep(1046,350),220)}}
@@ -553,6 +555,9 @@ $('openInfo').onclick=()=>openSheet('infoSheet');$('closeInfo').onclick=()=>clos
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){['setSheet','infoSheet'].forEach(id=>{if(!$(id).hidden)closeSheet(id)})}});
 try{localStorage.setItem('iw_mode','tabata')}catch(e){}
 $('toWalk').onclick=()=>{try{localStorage.setItem('iw_mode','walk')}catch(e){}location.href='./#today'};
+$('toHiit').onclick=()=>{try{localStorage.setItem('iw_mode','hiit')}catch(e){}location.href='hiit.html'};
+/* 高強度共用紀錄（HIIT、Tabata、間歇快走的快跑課）：算 48 小時間隔 */
+function hoursSinceHigh(){const log=store.get('hi_log',[]);if(!log.length)return null;return (Date.now()-log[log.length-1].ts)/36e5}
 
 renderAll();
 })();

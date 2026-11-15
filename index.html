@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="間歇快走慢跑">
 <title>公園間歇快走慢跑教練</title>
-<script>try{if(localStorage.getItem("iw_mode")==="tabata"&&!location.hash)location.replace("tabata.html")}catch(e){}</script>
+<script>try{var m=localStorage.getItem("iw_mode");if(!location.hash){if(m==="tabata")location.replace("tabata.html");else if(m==="hiit")location.replace("hiit.html")}}catch(e){}</script>
 <meta name="description" content="依間歇訓練理論設計的公園快走慢跑教練：每日課表、背景計時、手環震動提醒和運動紀錄。">
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
@@ -224,7 +224,7 @@ nav button.on svg{background:var(--soft)}
 <div class="wrap">
   <!-- 今天 -->
   <section class="view on" id="v-today">
-    <div class="modeseg modebar" role="group" aria-label="運動模式"><button class="on" aria-pressed="true">間歇快走慢跑</button><button id="toTabata3" aria-pressed="false">Tabata</button></div>
+    <div class="modeseg modebar" role="group" aria-label="運動模式"><button class="on" aria-pressed="true">間歇快走</button><button id="toHiit3" aria-pressed="false">HIIT</button><button id="toTabata3" aria-pressed="false">Tabata</button></div>
     <div class="top">
       <div class="hello"><span id="hello">早安</span><small id="todayDate"></small></div>
       <button class="lv" id="levelTag" aria-label="目前等級，點一下到設定調整"><b id="lvNum">1</b><span>等級</span></button>
@@ -335,7 +335,7 @@ nav button.on svg{background:var(--soft)}
     <div class="group-t">運動模式</div>
     <div class="group">
       <div class="item"><div class="l"><b>要做哪一種運動</b><span>選了會記住，下次打開 App 直接進入</span></div></div>
-      <div class="modeseg" role="group" aria-label="運動模式"><button class="on" aria-pressed="true">間歇快走慢跑</button><button id="toTabata" aria-pressed="false">Tabata</button></div>
+      <div class="modeseg" role="group" aria-label="運動模式"><button class="on" aria-pressed="true">間歇快走</button><button id="toHiit" aria-pressed="false">HIIT</button><button id="toTabata" aria-pressed="false">Tabata</button></div>
     </div>
 
     <div class="group-t">我的課表</div>
@@ -346,6 +346,7 @@ nav button.on svg{background:var(--soft)}
         <select id="sTotal"><option value="30">30 分鐘</option><option value="40">40 分鐘</option><option value="45">45 分鐘</option><option value="50">50 分鐘</option><option value="60" selected>60 分鐘</option><option value="70">70 分鐘</option><option value="80">80 分鐘</option><option value="90">90 分鐘</option></select></div>
       <div class="item"><div class="l"><b>年齡</b><span>用來換算心率範圍，可不填</span></div>
         <input id="sAge" type="number" inputmode="numeric" min="10" max="99" placeholder="例如 55"></div>
+      <div class="item"><div class="l"><b>搭配 HIIT 的週排程</b><span>週二、週五做 HIIT，其他天輕鬆走跑；關掉就回到原本的間歇週計畫</span></div><input type="checkbox" class="tg" id="sHiitWeek"></div>
     </div>
 
     <div class="group-t">運動中練英語</div>
@@ -449,7 +450,7 @@ const store={
   get(k,d){try{const v=localStorage.getItem(k);return v?JSON.parse(v):d}catch(e){return d}},
   set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
 };
-const defaults={level:1,total:60,age:'',voice:true,beep:true,vib:true,mid:true,rate:1,bg:true,notify:true,quiet:false,lang:'zh',lead:0};
+const defaults={level:1,total:60,age:'',voice:true,beep:true,vib:true,mid:true,rate:1,bg:true,notify:true,quiet:false,lang:'zh',lead:0,hiitWeek:true};
 let S=Object.assign({},defaults,store.get('iw_settings',{}));
 let H=store.get('iw_history',[]);
 const saveS=()=>store.set('iw_settings',S);
@@ -535,7 +536,15 @@ const W={
 const WEEK=['fartlek','easy','n44','rest','tempo','easy',null]; // 0=日
 
 function isoWeek(d){const t=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));const day=t.getUTCDay()||7;t.setUTCDate(t.getUTCDate()+4-day);const y=new Date(Date.UTC(t.getUTCFullYear(),0,1));return Math.ceil(((t-y)/864e5+1)/7)}
-function planFor(d){const k=WEEK[d.getDay()];return k||(isoWeek(d)%2?'short':'hill')}
+/* 搭配 HIIT：週二、週五去 HIIT 模式，其他天輕鬆（週日恢復快走、週六可走久一點） */
+const WEEK_H=['rest','easy','hiit','easy','easy','hiit','easy'];
+const hiitOn=()=>S.hiitWeek!==false;
+function isHiitDay(d){return hiitOn()&&WEEK_H[d.getDay()]==='hiit'}
+function planFor(d){if(hiitOn()){const h=WEEK_H[d.getDay()];return h==='hiit'?'easy':h}const k=WEEK[d.getDay()];return k||(isoWeek(d)%2?'short':'hill')}
+/* 高強度共用紀錄（HIIT、Tabata、這裡的快跑課）：兩次之間至少 48 小時 */
+function hiLog(){try{return JSON.parse(localStorage.getItem('hi_log')||'[]')}catch(e){return []}}
+function hoursSinceHigh(){const l=hiLog();return l.length?(Date.now()-l[l.length-1].ts)/36e5:null}
+function goHiit(e){if(e&&e.preventDefault)e.preventDefault();try{localStorage.setItem('iw_mode','hiit')}catch(err){}location.href='hiit.html'}
 
 /* 暖身與收操也依總時間伸縮 */
 function phases(totalMin,hard){
@@ -602,7 +611,17 @@ function renderToday(){
   let note='';
   if(inf.lvl<S.level)note='<div class="notice warn">時間較短，快段改用等級 '+inf.lvl+' 的長度，保住組數。</div>';
   if(inf.tight)note='<div class="notice warn">時間太短，間歇只排得下 1 到 2 組。今天改做「短間歇 30/30」或「輕鬆走跑」會更有效。</div>';
-  $('tNote').innerHTML=note;
+  const hh=hoursSinceHigh(),hTxt=hh==null?'':(hh<1?'不到 1':Math.floor(hh))+' 小時';
+  let pre='';
+  if(!chosen&&isHiitDay(now)){
+    pre=hh!=null&&hh<48?'<div class="notice warn">今天原本是 HIIT 日，但距離上次高強度只有 '+hTxt+'（建議至少 48 小時）。今天就做下面的輕鬆走跑。</div>'
+      :'<div class="notice"><b>今天是 HIIT 日。</b>到 HIIT 做主訓練，做完再回來用輕鬆走跑補滿時間。<div style="margin-top:8px"><button class="btn small" id="goHiitToday">去 HIIT</button></div></div>';
+  }else if(hh!=null&&hh<48&&(W[key].hard||key==='fartlek')){
+    pre='<div class="notice warn">距離上次高強度只有 '+hTxt+'，建議今天做輕鬆走跑，讓身體恢復。<div style="margin-top:8px"><button class="btn small ghost" id="toEasyToday">改成輕鬆走跑</button></div></div>';
+  }
+  $('tNote').innerHTML=pre+note;
+  if($('goHiitToday'))$('goHiitToday').onclick=goHiit;
+  if($('toEasyToday'))$('toEasyToday').onclick=()=>{chosen='easy';renderToday()};
   const go=$('btnStart');go.style.setProperty('--gc',hc.c);go.style.setProperty('--gt',hc.light?'var(--on-color-light)':'var(--on-color)');
   go.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></svg>開始 <span class="num">'+tm+'</span> 分鐘';
   go.onclick=()=>startRun(key,segs);
@@ -610,9 +629,10 @@ function renderToday(){
   // 這一週
   const start=new Date(now);start.setDate(now.getDate()-((now.getDay()+6)%7));
   let html='',doneN=0;
-  for(let i=0;i<7;i++){const d=new Date(start);d.setDate(start.getDate()+i);const k=planFor(d);const pt=T[peakType(k)];
-    const done=H.some(h=>h.date===ymd(d));if(done)doneN++;
-    html+='<div class="d'+(ymd(d)===ymd(now)?' today':'')+(done?' done':'')+'"><div class="c'+(pt.light?' lt':'')+'" style="--c:'+pt.color+'">'+DAYS[d.getDay()]+'</div>'+short(k)+'</div>'}
+  const hl=hiLog();
+  for(let i=0;i<7;i++){const d=new Date(start);d.setDate(start.getDate()+i);const k=planFor(d);const hd=isHiitDay(d);const pt=hd?T.run:T[peakType(k)];
+    const done=H.some(h=>h.date===ymd(d))||hl.some(x=>ymd(new Date(x.ts))===ymd(d));if(done)doneN++;
+    html+='<div class="d'+(ymd(d)===ymd(now)?' today':'')+(done?' done':'')+'"><div class="c'+(pt.light?' lt':'')+'" style="--c:'+pt.color+'">'+DAYS[d.getDay()]+'</div>'+(hd?'HIIT':short(k))+'</div>'}
   $('weekGrid').innerHTML=html;$('weekCount').textContent='已完成 '+doneN+' / 7 天';
   $('pickWorkout').innerHTML=Object.keys(W).map(k=>'<button data-k="'+k+'" class="'+(k===key?'on':'')+'"><i style="--c:'+T[peakType(k)].color+'"></i>'+W[k].name.replace(/（.*）/,'')+(k===planFor(now)?' <em>今天</em>':'')+'</button>').join('');
   renderSuggest();
@@ -901,6 +921,7 @@ $('fRpe').onclick=e=>{const b=e.target.closest('button');if(!b)return;F.rpe=+b.d
 $('fFeel').onclick=e=>{const b=e.target.closest('button');if(!b)return;const v=b.dataset.v;const i=F.feel.indexOf(v);i<0?F.feel.push(v):F.feel.splice(i,1);b.classList.toggle('on')};
 $('fSave').onclick=()=>{
   const d=new Date();
+  if(R.result.completed&&['n44','short','hill'].includes(R.key)){try{const l=hiLog();l.push({ts:Date.now(),kind:'walk',name:W[R.key].name,completed:true});localStorage.setItem('hi_log',JSON.stringify(l.slice(-200)))}catch(e){}}
   H.push({ts:Date.now(),date:ymd(d),key:R.key,name:W[R.key].name,level:S.level,sec:R.result.doneSec,completed:R.result.completed,rpe:F.rpe||null,feel:F.feel,note:$('fNote').value.trim()});
   saveH();closeFinish();toast('已儲存');
 };
@@ -935,7 +956,7 @@ $('btnShowImport').onclick=()=>{$('importBox').style.display='block';$('importTe
 $('btnImport').onclick=()=>{try{const a=JSON.parse($('importText').value);if(!Array.isArray(a))throw 0;const have=new Set(H.map(h=>h.ts));a.forEach(h=>{if(h&&h.ts&&!have.has(h.ts))H.push(h)});H.sort((x,y)=>x.ts-y.ts);saveH();renderAll();toast('匯入完成，共 '+H.length+' 筆');$('importBox').style.display='none'}catch(e){toast('格式不正確')}};
 
 /* ---------- 設定 ---------- */
-function syncSettings(){$('sLevel').value=S.level;$('sTotal').value=S.total;$('sAge').value=S.age;$('sVoice').checked=S.voice;$('sBeep').checked=S.beep;$('sVib').checked=S.vib;$('sMid').checked=S.mid;$('sBg').checked=S.bg;$('sNotify').checked=S.notify;$('sQuiet').checked=S.quiet;$('sLead').value=String(S.lead||0);$('sLang').value=S.lang;renderNotifyStatus();$('sRate').value=String(S.rate)}
+function syncSettings(){$('sLevel').value=S.level;$('sTotal').value=S.total;$('sAge').value=S.age;$('sVoice').checked=S.voice;$('sBeep').checked=S.beep;$('sVib').checked=S.vib;$('sMid').checked=S.mid;$('sBg').checked=S.bg;$('sNotify').checked=S.notify;$('sHiitWeek').checked=hiitOn();$('sQuiet').checked=S.quiet;$('sLead').value=String(S.lead||0);$('sLang').value=S.lang;renderNotifyStatus();$('sRate').value=String(S.rate)}
 $('sLevel').onchange=e=>{S.level=+e.target.value;saveS();renderToday()};
 $('sTotal').onchange=e=>{S.total=+e.target.value;saveS();renderToday()};
 $('sAge').oninput=e=>{S.age=e.target.value;saveS()};
@@ -943,6 +964,7 @@ $('sLang').onchange=e=>{S.lang=e.target.value;saveS()};
 $('sLead').onchange=e=>{S.lead=+e.target.value;saveS()};
 ['Voice','Beep','Vib','Mid','Bg','Notify','Quiet'].forEach(k=>$('s'+k).onchange=e=>{S[k.toLowerCase()]=e.target.checked;saveS()});
 $('sRate').onchange=e=>{S.rate=+e.target.value;saveS()};
+$('sHiitWeek').onchange=e=>{S.hiitWeek=e.target.checked;saveS();renderAll()};
 $('btnTestVoice').onclick=()=>{const v=S.voice,q=S.quiet;S.voice=true;S.quiet=false;say('開始快跑，四分鐘。只能說幾個字。','Fast run, 4 minutes. Set 2 of 4. Only a few words.');S.voice=v;beep(880,150);S.quiet=q};
 $('pickWorkout').onclick=e=>{const b=e.target.closest('button');if(!b)return;chosen=b.dataset.k;todayMin=todayMin;renderToday();window.scrollTo({top:0,behavior:'smooth'})};
 
@@ -953,13 +975,15 @@ document.querySelector('nav').onclick=e=>{const b=e.target.closest('button');if(
 window.addEventListener('hashchange',()=>show(location.hash.slice(1)));
 function renderMethod(){
   const order=[1,2,3,4,5,6,0];
-  $('mWeek').innerHTML=order.map(dw=>{const k=WEEK[dw];const keys=k?[k]:['short','hill'];const pt=T[peakType(keys[0])];
+  if(hiitOn()){$('mWeek').innerHTML=order.map(dw=>{const h=WEEK_H[dw];const hd=h==='hiit';const pt=hd?T.run:T[peakType(h)];
+    return '<div><div class="bub'+(pt.light?' lt':'')+'" style="--c:'+pt.color+'">'+DAYS[dw]+'</div><div class="main"><b>'+(hd?'HIIT（到 HIIT 模式）':W[h].name)+'</b><span>'+(hd?'做完再用輕鬆走跑補滿時間；距上次高強度不到 48 小時就改輕鬆':dw===6?'可以走久一點':dw===0?'恢復，也可以休息':'慢跑保持能說完整句子')+'</span></div><span class="tag">'+(hd?'高':W[h].level)+'</span></div>'}).join('')}
+  else $('mWeek').innerHTML=order.map(dw=>{const k=WEEK[dw];const keys=k?[k]:['short','hill'];const pt=T[peakType(keys[0])];
     return '<div><div class="bub'+(pt.light?' lt':'')+'" style="--c:'+pt.color+'">'+DAYS[dw]+'</div><div class="main"><b>'+keys.map(x=>W[x].name).join(' ／ ')+'</b>'+(k?'':'<span>單週 30/30、雙週坡道</span>')+'</div><span class="tag">'+W[keys[0]].level+'</span></div>'}).join('');
   $('mIntensity').innerHTML=['rec','walk','jog','tempo','run'].map(t=>'<div><div class="bar" style="--c:'+T[t].color+'"></div><div class="main"><b>'+(t==='rec'?'暖身／恢復走':T[t].name)+'</b><span>'+T[t].talk+'</span></div><span class="tag">RPE '+T[t].rpe+'</span></div>').join('');
 }
 function renderAll(){renderToday();renderLog();renderMethod()}
 function goTabata(e){if(e)e.preventDefault();try{localStorage.setItem('iw_mode','tabata')}catch(err){}location.href='tabata.html'}
-$('toTabata').onclick=goTabata;$('toTabata3').onclick=goTabata;
+$('toTabata').onclick=goTabata;$('toTabata3').onclick=goTabata;$('toHiit').onclick=goHiit;$('toHiit3').onclick=goHiit;
 
 syncSettings();renderAll();show(location.hash.slice(1));
 })();
