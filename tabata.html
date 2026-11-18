@@ -431,12 +431,28 @@ function buildTrack(g){
 /* ---------- 計時 ---------- */
 let R=null;
 const C=2*Math.PI*52;
+/* Android App：自動接續時把計時與提示交給原生服務（不佔用聲音，英語記事本照常播放） */
+const NATIVE=(()=>{try{return !!(window.NativeCoach&&NativeCoach.available())}catch(e){return false}})();
+function nState(){try{return JSON.parse(NativeCoach.state())}catch(e){return {running:false,done:false,pos:0}}}
+function tabCount(x){return x.t==='work'||x.t==='rest'?('第 '+(x.round||'')+'／'+S.rounds+' 回合'+(S.sets>1?'，第 '+x.set+'／'+S.sets+' 組':'')):(x.t==='setrest'?'第 '+x.set+' 組完成':'')}
+function nativePlan(g){
+  const E=S.lang==='en';
+  return {title:'Tabata',lang:E?'en':'zh',voice:S.voice,beep:S.beep,vib:S.vib,quiet:false,notify:S.notify!==false,rate:1,
+    endSay:E?'Done. Cool down and stretch.':'完成了，記得緩和和伸展',endVib:VIB.end,
+    segs:g.map(x=>{const marks=[];
+      if(x.t==='work'&&x.s>=20)marks.push({at:x.s/2,say:E?'Halfway':'一半了'});
+      return {s:x.s,title:(x.t==='rest'||x.t==='setrest'?'運動時間到，':'')+PH[x.t].zh+(x.t==='work'&&x.name?'：'+x.name:'')+'　'+durZh(x.s),sub:tabCount(x),
+        say:E?PH[x.t].en+(x.t==='work'&&x.name?', '+x.name:'')+', '+durEn(x.s):PH[x.t].zh+(x.t==='work'&&x.name?'，'+x.name:'')+'，'+durZh(x.s),
+        tone:x.t==='work'?'work':'easy',vib:VIB[x.t],cdVib:x.t==='work',marks}})};
+}
+
 function start(){
   const g=segs();if(!g.length)return;
   try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();AC.resume&&AC.resume()}catch(e){}
   try{speechSynthesis.cancel();speechSynthesis.speak(new SpeechSynthesisUtterance(''))}catch(e){}
   const starts=[];let acc=0;g.forEach(x=>{starts.push(acc);acc+=x.s});
-  R={g,starts,total:acc,idx:-1,mode:S.adv==='auto'?'audio':'clock',paused:false,waiting:false,cues:{},segStart:0,pausedAt:0};
+  R={g,starts,total:acc,idx:-1,mode:S.adv==='auto'?(NATIVE?'native':'audio'):'clock',paused:false,waiting:false,cues:{},segStart:0,pausedAt:0};
+  if(R.mode==='native'){try{NativeCoach.start(JSON.stringify(nativePlan(g)))}catch(e){R.mode='clock';R.clockBase=Date.now()}}
   if(R.mode==='audio'){
     try{R.url=buildTrack(g);R.audio=new Audio(R.url);
       R.audio.addEventListener('ended',()=>finish(true));
@@ -455,7 +471,7 @@ function start(){
   else{enter(0);R.segStart=Date.now();R.timer=setInterval(tick,200)}
 }
 /* 自動模式的目前位置（秒） */
-function autoPos(){if(R.mode==='audio'&&R.audio)return R.audio.currentTime;return ((R.paused?R.pausedAt:Date.now())-R.clockBase)/1000}
+function autoPos(){if(R.mode==='native')return nState().pos;if(R.mode==='audio'&&R.audio)return R.audio.currentTime;return ((R.paused?R.pausedAt:Date.now())-R.clockBase)/1000}
 function idxAt(p){let i=0;while(i+1<R.starts.length&&R.starts[i+1]<=p)i++;return i}
 function enter(i){
   R.idx=i;R.cues={};const x=R.g[i];
@@ -471,6 +487,7 @@ function enter(i){
   $('rNext').innerHTML=n?('<span>接著　'+PH[n.t].zh+(n.t==='work'&&n.name?'：'+esc(n.name):'')+'</span><span class="num">'+mmss(n.s)+'</span>'):'<span>最後一段</span><span></span>';
   const zh=PH[x.t].zh+(x.t==='work'&&x.name?'，'+x.name:'')+'，'+durZh(x.s);
   const en=PH[x.t].en+(x.t==='work'&&x.name?', '+x.name:'')+', '+durEn(x.s);
+  if(R.mode==='native')return;
   say(zh,en);
   if(document.visibilityState==='hidden')notify((x.t==='rest'||x.t==='setrest'?'運動時間到，':'')+PH[x.t].zh+(x.t==='work'&&x.name?'：'+x.name:'')+'　'+durZh(x.s),(x.round?'第 '+x.round+'／'+S.rounds+' 回合':'')+(S.sets>1&&x.set?'，第 '+x.set+'／'+S.sets+' 組':''),VIB[x.t]);
   else vib(VIB[x.t]);
@@ -485,6 +502,7 @@ function show(rem,x){
 function tick(){
   if(!R||R.done)return;
   if(S.adv==='auto'){
+    if(R.mode==='native'){const st=nState();if(!st.running&&!st.done){finish(false);return}}
     const p=autoPos();if(p>=R.total){finish(true);return}
     const i=idxAt(p);if(i!==R.idx)enter(i);
     if(R.paused)return;
@@ -497,6 +515,7 @@ function tick(){
   if(rem<=0)segDone();
 }
 function cueTail(rem,x){
+  if(R.mode==='native')return;
   const c=R.cues,sec=Math.ceil(rem);
   if(x.t==='work'&&sec<=3&&sec>=1&&!c['v'+sec]&&document.visibilityState==='visible'){c['v'+sec]=1;vib([90])}
   if(x.t==='work'&&x.s>=20&&rem<=x.s/2&&!c.half){c.half=1;say('一半了','Halfway')}
@@ -519,16 +538,17 @@ function go(i){R.waiting=false;$('wait').classList.remove('on');enter(i);R.segSt
 $('bWait').onclick=()=>{if(!R)return;go(R.idx+1)};
 $('bPause').onclick=()=>{
   if(!R||R.done||R.waiting)return;
-  if(!R.paused){R.paused=true;R.pausedAt=Date.now();if(R.mode==='audio'&&R.audio){try{R.audio.pause()}catch(e){}}
-    $('bPause').textContent='繼續';$('runner').classList.add('paused');release();say('暫停','Paused')}
+  if(!R.paused){R.paused=true;R.pausedAt=Date.now();if(R.mode==='native'){try{NativeCoach.pause()}catch(e){}}else if(R.mode==='audio'&&R.audio){try{R.audio.pause()}catch(e){}}
+    $('bPause').textContent='繼續';$('runner').classList.add('paused');release();if(R.mode!=='native')say('暫停','Paused')}
   else{const d=Date.now()-R.pausedAt;R.paused=false;
-    if(S.adv==='auto'){if(R.mode==='audio'&&R.audio){try{R.audio.play()}catch(e){}}else R.clockBase+=d}else R.segStart+=d;
+    if(S.adv==='auto'){if(R.mode==='native'){try{NativeCoach.resume()}catch(e){}}else if(R.mode==='audio'&&R.audio){try{R.audio.play()}catch(e){}}else R.clockBase+=d}else R.segStart+=d;
     $('bPause').textContent='暫停';$('runner').classList.remove('paused');keepAwake();tick()}
 };
 $('bSkip').onclick=()=>{
   if(!R||R.done)return;
   if(S.adv==='auto'){const nxt=R.idx+1;if(nxt>=R.g.length){finish(true);return}
-    if(R.mode==='audio'&&R.audio){try{R.audio.currentTime=R.starts[nxt]}catch(e){}}else R.clockBase-= (R.starts[nxt]-autoPos())*1000;
+    if(R.mode==='native'){try{NativeCoach.seek(R.starts[nxt])}catch(e){}}
+    else if(R.mode==='audio'&&R.audio){try{R.audio.currentTime=R.starts[nxt]}catch(e){}}else R.clockBase-= (R.starts[nxt]-autoPos())*1000;
     tick();return}
   if(R.waiting){go(R.idx+1);return}
   if(R.idx+1>=R.g.length){finish(true);return}
@@ -541,7 +561,8 @@ function finish(done){
   if(done){try{const log=store.get('hi_log',[]);log.push({ts:Date.now(),kind:'tabata',completed:true});store.set('hi_log',log.slice(-200))}catch(e){}}
   try{R.audio&&R.audio.pause()}catch(e){}
   try{R.url&&URL.revokeObjectURL(R.url)}catch(e){}
-  if(done){say('完成了，記得緩和和伸展','Done. Cool down and stretch.');if(document.visibilityState==='hidden')notify('Tabata 完成','記得緩和和伸展',VIB.end);else vib(VIB.end);if(R.mode!=='audio'){beep(784,200);setTimeout(()=>beep(1046,350),220)}}
+  if(R.mode==='native'){if(!done)try{NativeCoach.stop()}catch(e){}}
+  else if(done){say('完成了，記得緩和和伸展','Done. Cool down and stretch.');if(document.visibilityState==='hidden')notify('Tabata 完成','記得緩和和伸展',VIB.end);else vib(VIB.end);if(R.mode!=='audio'){beep(784,200);setTimeout(()=>beep(1046,350),220)}}
   $('runner').classList.remove('on');$('wait').classList.remove('on');document.body.style.overflow='';$('bStop').textContent='結束';
   try{document.querySelector('meta[name=theme-color]').setAttribute('content','#1C2B27')}catch(e){}
   if(done)toast('完成 '+R.g.filter(x=>x.t==='work').length+' 個運動段');

@@ -368,6 +368,11 @@ nav button.on svg{background:var(--soft)}
     </div>
 
     <div class="group-t">關閉螢幕也提醒</div>
+    <div class="group" id="nativeBox" hidden>
+      <div class="item"><div class="l"><b>Android App 模式</b><span>計時、震動和語音由 App 負責，關螢幕也準。提示時英語例句只會暫時變小聲，不會被暫停</span></div></div>
+      <div class="item"><div class="l"><b>測試提示</b><span>先讓英語記事本播放例句，再回來按：例句應該變小聲一下再恢復</span></div><button class="btn small ghost" id="btnNativeCue">測試</button></div>
+      <div class="item"><div class="l"><b>測試震動</b><span>應該長震兩下</span></div><button class="btn small ghost" id="btnNativeVib">測試</button></div>
+    </div>
     <div class="group">
       <div class="item"><div class="l"><b>背景模式</b><span>整堂課做成一條音軌播放並計時，關閉螢幕也會響</span></div><input type="checkbox" class="tg" id="sBg" checked></div>
       <div class="item"><div class="l"><b>每段發通知</b><span>手機或小米手環會震動</span></div><input type="checkbox" class="tg" id="sNotify" checked></div>
@@ -742,13 +747,34 @@ function renderNotifyStatus(){
 
 /* ---------- 計時器（背景模式以音軌時間為準） ---------- */
 let R=null;
+/* Android App：計時與提示交給原生服務（不佔用聲音，英語記事本照常播放） */
+const NATIVE=(()=>{try{return !!(window.NativeCoach&&NativeCoach.available())}catch(e){return false}})();
+function nState(){try{return JSON.parse(NativeCoach.state())}catch(e){return {running:false,done:false,pos:0}}}
+function segCue(g,i){
+  const t=T[g.t];const first=i===0;
+  let zh=(first?'開始訓練。':'')+segName(g)+'，'+durText(g.s)+'。'+(g.rep?'第'+g.rep+'組，共'+g.of+'組。':'')+t.talk;
+  let en=(first?"Let's start. ":'')+nameEn(g)+', '+durEn(g.s)+'. '+(g.rep?'Set '+g.rep+' of '+g.of+'. ':'')+EN[g.t][1]+'.';
+  return {zh,en};
+}
+function nativePlan(key,segs){
+  const E=S.lang==='en',lead=+S.lead||0;
+  return {title:W[key].name,lang:E?'en':'zh',voice:S.voice,beep:S.beep,vib:S.vib,quiet:S.quiet,notify:S.notify,rate:+S.rate||1,
+    endSay:E?'Workout complete. Great job! Remember to stretch your calves and thighs.':'訓練完成，做得好！記得伸展小腿和大腿。',endVib:[300,150,300,150,600],
+    segs:segs.map((g,i)=>{const c=segCue(g,i),t=T[g.t],nx=segs[i+1],hard=HARD.includes(g.t),marks=[];
+      if(S.mid&&g.s>=180){const r=Math.round(g.s/2/30)*30||30;marks.push({at:g.s/2,say:E?'Halfway. '+durEn(r)+' to go.':'一半了，再'+durText(r)})}
+      if(S.mid&&g.s>=60&&hard)marks.push({at:g.s-10,say:E?'Last ten seconds':'最後十秒'});
+      if(lead&&nx&&g.s>lead+3)marks.push({at:g.s-lead,say:E?'In '+lead+' seconds, '+nameEn(nx):lead+'秒後，'+segName(nx),vib:S.quiet?[150,100,150]:null});
+      return {s:g.s,title:segName(g)+' '+durText(g.s)+(g.rep?'（第 '+g.rep+'/'+g.of+' 組）':''),sub:'RPE '+t.rpe+'｜'+t.talk,say:E?c.en:c.zh,
+        tone:hard?'work':'easy',vib:hard?[200,100,200,100,200]:[300],cdVib:false,marks}})};
+}
 
 function startRun(key,segs){
   try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();AC.resume&&AC.resume()}catch(e){}
   try{speechSynthesis.cancel();speechSynthesis.speak(new SpeechSynthesisUtterance(''))}catch(e){}
   const starts=[];let acc=0;segs.forEach(g=>{starts.push(acc);acc+=g.s});
   R={key,segs,starts,total:acc,idx:-1,mode:'clock',t0:Date.now(),pausedAcc:0,paused:false,pauseAt:0,offset:0,skipped:0,cues:{},done:false};
-  if(S.bg){
+  if(NATIVE){try{NativeCoach.start(JSON.stringify(nativePlan(key,segs)));R.mode='native'}catch(e){R.mode='clock'}}
+  else if(S.bg){
     try{
       const url=buildTrack(segs,S.quiet);const a=new Audio(url);a.preload='auto';
       R.audio=a;R.url=url;R.mode='audio';
@@ -764,7 +790,7 @@ function startRun(key,segs){
     }catch(e){R.mode='clock'}
   }
   $('rWorkout').textContent=W[key].name;
-  $('rMode').textContent=S.quiet?'英語練習模式：手機靜音，換段由手環震動':(R.mode==='audio'?'背景模式：可以關閉螢幕':'請保持螢幕亮著');
+  $('rMode').textContent=R.mode==='native'?(S.quiet?'英語練習模式：只用震動提示，可以關閉螢幕':'App 模式：可以關閉螢幕，提示時英語例句只會暫時變小聲'):S.quiet?'英語練習模式：手機靜音，換段由手環震動':(R.mode==='audio'?'背景模式：可以關閉螢幕':'請保持螢幕亮著');
   $('rProfile').innerHTML=profileSVG(segs,true);
   $('runner').classList.add('on');$('runner').classList.remove('paused');$('bPause').textContent='暫停';document.body.style.overflow='hidden';
   keepAwake();R.timer=setInterval(tick,250);tick();
@@ -782,6 +808,7 @@ function reclaimAudio(){ // 回到間歇 App 畫面時，才把音軌接回來
 }
 function pos(){
   if(!R)return 0;
+  if(R.mode==='native')return nState().pos;
   if(R.mode==='audio'&&R.audio)return R.audio.currentTime;
   const now=R.paused?R.pauseAt:Date.now();
   return (now-R.t0-R.pausedAcc)/1000+R.offset;
@@ -811,6 +838,7 @@ function enterSeg(){
   const n=R.segs[R.idx+1];
   const nextTxt=n?('接著：'+segName(n)+' '+durText(n.s)):'這是最後一段';
   $('rNext').innerHTML=n?('<span>接著　'+segName(n)+'</span><span class="num">'+mmssShort(n.s)+'</span>'):'<span>最後一段，加油</span><span></span>';
+  if(R.mode==='native')return;
   let msg=(first?'開始訓練。':'')+segName(g)+'，'+durText(g.s)+'。';
   if(g.rep)msg+='第'+g.rep+'組，共'+g.of+'組。';
   msg+=t.talk;
@@ -824,6 +852,7 @@ function enterSeg(){
 }
 function tick(){
   if(!R||R.done)return;
+  if(R.mode==='native'){const st=nState();if(!st.running&&!st.done){finishRun(false);return}}
   const p=pos();
   if(p>=R.total){finishRun(true);return}
   const i=segIndexAt(p);
@@ -835,6 +864,7 @@ function tick(){
   const done=p-R.skipped;
   const pc=(p/R.total*100).toFixed(2)+'%';$('rDone').style.width=pc;$('rMarker').style.left=pc;
   $('rElapsed').textContent=mmss(p)+' / '+mmss(R.total);
+  if(R.mode==='native')return;
   const c=R.cues;
   const nx=R.segs[R.idx+1];
   const nowT=Date.now(),gap=nowT-(R.lastTick||nowT);R.lastTick=nowT;
@@ -854,7 +884,8 @@ function finishRun(completed){
   const p=Math.min(pos(),R.total);
   if(R.audio){try{if(!completed)R.audio.pause();setTimeout(()=>{try{R&&R.audio&&R.audio.pause()}catch(e){}},2500)}catch(e){}}
   R.result={completed,doneSec:Math.round(Math.max(0,(completed?R.total:p)-R.skipped))};
-  if(completed){say('訓練完成，做得好！記得伸展小腿和大腿。','Workout complete. Great job! Remember to stretch your calves and thighs.');vib([300,150,300,150,600]);if(R.mode!=='audio'){beep(784,200);setTimeout(()=>beep(1046,350),220)}
+  if(R.mode==='native'){if(!completed)try{NativeCoach.stop()}catch(e){}}
+  else if(completed){say('訓練完成，做得好！記得伸展小腿和大腿。','Workout complete. Great job! Remember to stretch your calves and thighs.');vib([300,150,300,150,600]);if(R.mode!=='audio'){beep(784,200);setTimeout(()=>beep(1046,350),220)}
     notify('🎉 訓練完成','做得好！記得伸展小腿和大腿。')}
   $('runner').classList.remove('on');document.body.style.overflow='';
   try{document.querySelector('meta[name=theme-color]').setAttribute('content','#183A32')}catch(e){}
@@ -864,6 +895,9 @@ function togglePause(force){
   if(!R||R.done)return;
   const want=force===undefined?!R.paused:force;
   if(want===R.paused)return;
+  if(R.mode==='native'){try{want?NativeCoach.pause():NativeCoach.resume()}catch(e){}
+    if(want){R.paused=true;$('bPause').textContent='繼續';$('runner').classList.add('paused')}else{R.paused=false;$('bPause').textContent='暫停';$('runner').classList.remove('paused');tick()}
+    return}
   if(want){if(R.mode==='audio'&&R.audio){R.selfPause=true;try{R.audio.pause()}catch(e){}R.selfPause=false}R.paused=true;R.pauseAt=Date.now();
     $('bPause').textContent='繼續';$('runner').classList.add('paused');say('暫停','Paused');releaseAwake()}
   else{if(R.mode==='clock')R.pausedAcc+=Date.now()-R.pauseAt;R.paused=false;if(R.mode==='audio'&&R.audio){try{R.audio.play()}catch(e){}}else reclaimAudio();
@@ -874,7 +908,8 @@ function skip(){
   const p=pos();const i=segIndexAt(p);
   if(i+1>=R.segs.length){finishRun(true);return}
   const target=R.starts[i+1];R.skipped+=target-p;
-  if(R.mode==='audio'&&R.audio){try{R.audio.currentTime=target}catch(e){}}
+  if(R.mode==='native'){try{NativeCoach.seek(target)}catch(e){}}
+  else if(R.mode==='audio'&&R.audio){try{R.audio.currentTime=target}catch(e){}}
   else R.offset+=target-p;
   tick();
 }
@@ -985,6 +1020,9 @@ function renderAll(){renderToday();renderLog();renderMethod()}
 function goTabata(e){if(e)e.preventDefault();try{localStorage.setItem('iw_mode','tabata')}catch(err){}location.href='tabata.html'}
 $('toTabata').onclick=goTabata;$('toTabata3').onclick=goTabata;$('toHiit').onclick=goHiit;$('toHiit3').onclick=goHiit;
 
+if(NATIVE){$('nativeBox').hidden=false;
+  $('btnNativeCue').onclick=()=>{try{NativeCoach.testCue(S.lang==='en'?'Fast run, one minute.':'快跑，一分鐘。只能說幾個字。',S.lang)}catch(e){}};
+  $('btnNativeVib').onclick=()=>{try{NativeCoach.testVibrate('[800,200,800]')}catch(e){}}}
 syncSettings();renderAll();show(location.hash.slice(1));
 })();
 </script>

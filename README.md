@@ -36,6 +36,16 @@
 - **週排程**：間歇快走「設定 → 搭配 HIIT 的週排程」（預設開）：週二、週五是 HIIT 日，其他天輕鬆走跑，週日恢復。HIIT 日的今天頁會出現「去 HIIT」；不到 48 小時則提醒改做輕鬆走跑。關掉就回到原本的間歇週計畫。
 - 震動與通知和 Tabata 相同（運動時間一到長震兩下）。
 
+## Android App（測試版）
+- 下載：<https://github.com/chahan1/walk/releases/download/android-latest/walk-coach.apk>（用手機開啟，允許「安裝不明來源的應用程式」）。
+- App 是一個外殼，畫面直接載入本網站，所以網頁更新會自動生效；只有原生功能改動時才需要重新安裝。
+- **原生計時服務**（`android/`）：間歇快走、HIIT、Tabata（自動接續）開始後，計時、震動、語音都交給 Android 前景服務，不再播放背景音軌。
+  - 提示出聲時向系統要求「暫時降低其他 App 音量」，英語記事本的例句只會短暫變小聲，不會被暫停。
+  - 震動用鬧鐘類別，關螢幕也會震，不受「觸感回饋」設定影響；英語練習模式只震動不出聲。
+  - 通知列可以暫停、跳下一段、結束；換段也會發提醒通知給小米手環。
+- App 的紀錄和瀏覽器版分開存放，需要的話用「紀錄 → 匯出／匯入」搬過去。
+- 打包：推送 `android/` 後 GitHub Actions（`.github/workflows/android.yml`）自動產生 APK 並更新 Release。簽章檔 `android/app/walkcoach.jks` 放在倉庫裡，確保每一版都能直接覆蓋安裝（只限自用）。
+
 ## 第一次使用（小米手機）
 1. 用 Chrome 開啟 <https://chahan1.github.io/walk/>，右上選單 →「加到主畫面」。
 2. 手機「設定 → 應用程式 → Chrome → 省電策略」改成「無限制」。
@@ -48,5 +58,6 @@
 | `index.html` | 間歇快走慢跑 |
 | `hiit.html` | HIIT 高效燃脂 |
 | `tabata.html` | Tabata 時間指導器 |
+| `android/` | Android App 外殼與原生計時服務 |
 | `sw.js` | 離線快取、通知點擊（只會清除自己 `iw-` 開頭的快取，不影響英語筆記本） |
 | `manifest.json`、`icon-*.png` | 加到主畫面用的名稱與圖示 |
